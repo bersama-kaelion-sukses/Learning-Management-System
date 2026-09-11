@@ -1,0 +1,82 @@
+body 
+{
+    background: #f0f2f5;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+/* Login Page Start  */
+.login-wrapper {
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    overflow: hidden;
+    max-width: 900px;
+    width: 100%;
+}
+.login-image-mobile {
+    display: none;
+}
+
+.login-image {
+    background: no-repeat center center;
+    background-size: contain;
+    height: 50vh;
+}
+
+.login-card {
+    padding: 40px;
+}
+
+.login-card img {
+    width: 200px;
+    margin-bottom: 20px;
+}
+
+.invalid-feedback {
+    min-height: 20px;          /* Reserve space */
+    display: block;            /* Keep space even if hidden */
+    margin-top: 4px;
+    font-size: 0.85rem;
+    color: #dc3545;
+    opacity: 0;
+    transition: opacity 0.2s ease-in-out;
+}
+
+.was-validated .form-control:invalid ~ .invalid-feedback,
+.form-control.is-invalid ~ .invalid-feedback {
+    opacity: 1;
+}
+
+.form-control.is-invalid {
+    border-color: #dc3545;
+    box-shadow: 0 0 0 0.15rem rgba(220, 53, 69, 0.25);
+}
+
+/* ===== CAPTCHA VALIDATION SUPPORT ===== */
+
+#captcha-wrapper.is-invalid .invalid-feedback {
+    opacity: 1;
+}
+
+#captcha-wrapper.is-invalid {
+    text-align:left;
+}
+
+@media (max-width: 768px) {
+    .login-image {
+        display: none;
+    }
+    .login-image-mobile {
+        display: block;
+        text-align: center;
+    }
+    .login-image-mobile img {
+        width: 100%;
+        max-width: 100vw; /* biar nggak kebesaran */
+        height: auto; 
+        border-radius: 10px 10px 0 0;
+    }
+}
+/* Login Page End */
