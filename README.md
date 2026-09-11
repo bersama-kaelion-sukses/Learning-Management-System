@@ -48,3 +48,10 @@ LMS ini digunakan secara rutin setiap bulan oleh seluruh  karyawan PT. Sunindo K
 - **Backend:** [Laravel]
 - **Database:** [MySQL]
 - **Server:** [Apache/localhost]
+
+
+## Cuplikan 
+<img width="995" height="726" alt="image" src="https://github.com/user-attachments/assets/833d541f-3e6a-43d3-a096-fe2b019f90bb" />
+<img width="1903" height="984" alt="image" src="https://github.com/user-attachments/assets/26c80516-6847-4084-8cbf-71eff4f9e99b" />
+<img width="1918" height="992" alt="image" src="https://github.com/user-attachments/assets/774bca61-401f-421a-b7e9-8840b2d95ca6" />
+<img width="1914" height="998" alt="image" src="https://github.com/user-attachments/assets/2e108708-78e3-460c-ac6c-ff759ec98982" />
