@@ -2,6 +2,28 @@ export function InitDetailCourse() {
     const itemOptions = document.querySelectorAll(".item-option");
     const detailPanel = document.getElementById("course-detail-panel");
 
+    const hasQuizValue = value => {
+        if (value === null || value === undefined) return false;
+        const normalized = String(value).trim();
+        return normalized !== "" && normalized.toLowerCase() !== "null";
+    };
+
+    const escapeQuizText = value => {
+        if (!hasQuizValue(value)) return "";
+        return String(value)
+            .replaceAll("&", "&amp;")
+            .replaceAll("<", "&lt;")
+            .replaceAll(">", "&gt;")
+            .replaceAll('"', "&quot;")
+            .replaceAll("'", "&#039;");
+    };
+
+    const quizImageUrl = value => {
+        if (!hasQuizValue(value)) return "";
+        const path = String(value).trim();
+        return path.startsWith("http") || path.startsWith("/") ? path : `/${path}`;
+    };
+
     function truncateWithToggle(text, limit = 150, type = null) {
         // khusus sertifikat → jangan render deskripsi
         if (type === "6") return "";
@@ -300,21 +322,42 @@ export function InitDetailCourse() {
                         `;
             
                         quiz.forEach((q, i) => {
+                            const questionText = hasQuizValue(q.question_text)
+                                ? `<p class="mb-3">${escapeQuizText(q.question_text)}</p>`
+                                : "";
+                            const questionImage = quizImageUrl(q.question_image);
+                            const questionImageHtml = questionImage
+                                ? `<img src="${questionImage}" class="img-fluid rounded border mb-3"
+                                    alt="Gambar soal ${i + 1}" style="max-height: 320px; object-fit: contain;">`
+                                : "";
+
                             content += `
                                 <div class="mb-4 p-3 border rounded bg-light">
                                     <h6 class="fw-bold">Soal ${i + 1}</h6>
-                                    <p class="mb-2">${q.question_text}</p>
+                                    ${questionImageHtml}
+                                    ${questionText}
                                     <ul class="list-group">
                             `;
             
                             q.options.forEach(opt => {
                                 // 🔥 FORCE convert ke integer → hasil pasti 0 atau 1
                                 const isCorrect = parseInt(opt.is_correct) === 1;
-            
+                                const optionText = hasQuizValue(opt.option_text)
+                                    ? `<span>${escapeQuizText(opt.option_text)}</span>`
+                                    : "";
+                                const optionImage = quizImageUrl(opt.option_image);
+                                const optionImageHtml = optionImage
+                                    ? `<img src="${optionImage}" class="img-fluid rounded border"
+                                        alt="Gambar opsi" style="max-height: 180px; object-fit: contain;">`
+                                    : "";
+
                                 content += `
                                     <li class="list-group-item d-flex justify-content-between align-items-center
-                                            ${isCorrect ? 'list-group-item-success' : ''}">
-                                        <span>${opt.option_text}</span>
+                                             ${isCorrect ? 'list-group-item-success' : ''}">
+                                        <div class="d-flex flex-column align-items-start gap-2 flex-grow-1 me-3">
+                                            ${optionImageHtml}
+                                            ${optionText}
+                                        </div>
                                         ${isCorrect 
                                             ? '<span class="badge bg-success">Benar</span>' 
                                             : '<span class="badge bg-secondary">Salah</span>'}

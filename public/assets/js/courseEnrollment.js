@@ -1,4 +1,26 @@
 export function InitCourseEnrollment() {
+    const hasQuizValue = value => {
+        if (value === null || value === undefined) return false;
+        const normalized = String(value).trim();
+        return normalized !== "" && normalized.toLowerCase() !== "null";
+    };
+
+    const escapeQuizText = value => {
+        if (!hasQuizValue(value)) return "";
+        return String(value)
+            .replaceAll("&", "&amp;")
+            .replaceAll("<", "&lt;")
+            .replaceAll(">", "&gt;")
+            .replaceAll('"', "&quot;")
+            .replaceAll("'", "&#039;");
+    };
+
+    const quizImageUrl = value => {
+        if (!hasQuizValue(value)) return "";
+        const path = String(value).trim();
+        return path.startsWith("http") || path.startsWith("/") ? path : `/${path}`;
+    };
+
     // ====================
     window.__QUIZ_DEBUG__ ??= {};
     window.__ACTIVE_QUIZ__ ??= null;
@@ -893,24 +915,48 @@ export function InitCourseEnrollment() {
                         </div>
                     </div>`;
 
+                const questionText = hasQuizValue(q.question_text)
+                    ? `<p class="fw-semibold text-start mb-3">${escapeQuizText(q.question_text)}</p>`
+                    : "";
+                const questionImage = quizImageUrl(q.question_image);
+                const questionImageHtml = questionImage
+                    ? `<div class="text-start mb-3">
+                        <img src="${questionImage}" class="img-fluid rounded border"
+                            alt="Gambar soal ${index + 1}" style="max-height: 320px; object-fit: contain;">
+                    </div>`
+                    : "";
+
                 let html = `
                     <div class="d-flex justify-content-between mb-2 align-items-center">
                         <h6>Soal ${index + 1} dari ${totalQ}</h6>
                         ${timeDisplay}
                     </div>
                     ${progressHtml}
-                    <p class="fw-semibold text-start mb-3">${q.question_text}</p>
+                    ${questionImageHtml}
+                    ${questionText}
                     <form id="quiz-form">`;
 
                 q.options.forEach(opt => {
                     const checked = answers[q.question_id]?.selected == opt.option_id ? "checked" : "";
+                    const optionText = hasQuizValue(opt.option_text)
+                        ? `<span>${escapeQuizText(opt.option_text)}</span>`
+                        : "";
+                    const optionImage = quizImageUrl(opt.option_image);
+                    const optionImageHtml = optionImage
+                        ? `<img src="${optionImage}" class="img-fluid rounded border"
+                            alt="Gambar opsi" style="max-height: 220px; object-fit: contain;">`
+                        : "";
+
                     html += `
-                        <div class="form-check mb-2 text-start">
+                        <div class="form-check mb-2 text-start border rounded p-2 ps-5">
                             <input class="form-check-input" type="radio"
                                 name="answer_${q.question_id}" value="${opt.option_id}"
                                 data-correct="${opt.is_correct}" id="opt-${opt.option_id}" ${checked}>
-                            <label class="form-check-label" for="opt-${opt.option_id}">
-                                ${opt.option_text}
+                            <label class="form-check-label w-100" for="opt-${opt.option_id}">
+                                <span class="d-flex flex-column align-items-start gap-2">
+                                    ${optionImageHtml}
+                                    ${optionText}
+                                </span>
                             </label>
                         </div>`;
                 });

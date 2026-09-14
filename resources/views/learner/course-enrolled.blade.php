@@ -123,9 +123,11 @@
                                                         return [
                                                             'question_id'   => $q->question_id,
                                                             'question_text' => $q->question_text,
+                                                            'question_image'=> $q->question_image,
                                                             'options'       => $q->options?->map(fn($o) => [
                                                                 'option_id'   => $o->option_id,
                                                                 'option_text' => $o->option_text,
+                                                                'option_image'=> $o->option_image,
                                                                 'is_correct'  => $o->is_correct,
                                                             ])->values()->toArray(),
                                                         ];

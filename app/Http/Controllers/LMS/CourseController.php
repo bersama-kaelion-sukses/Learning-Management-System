@@ -190,7 +190,7 @@ class CourseController extends Controller
                 ? null 
                 : \Carbon\Carbon::parse($value)->format('Y-m-d H:i:s');
         }
-        
+
         // update trainer id & name
         $course->course_trainer_id   = Auth::user()->user_id;
         $course->course_trainer_name = Auth::user()->full_name ?? Auth::user()->name;
@@ -1656,77 +1656,151 @@ class CourseController extends Controller
     }
     public function MultipleChoice(Request $request, $id)
     {
-        Log::info("📥 Payload diterima:", $request->all());
 
-        $savedQuestions = [];
+        CourseWeekItem::findOrFail($id);
 
-        foreach ($request->questions as $qIndex => $qData) {
-            // 🔎 Update atau create Question
-            if (!empty($qData['question_id'])) {
-                $question = CourseTypeQuestion::find($qData['question_id']);
-                if ($question) {
-                    $question->update([
-                        'question_text' => $qData['question_text'] ?? '(empty)',
-                    ]);
-                    Log::info("✏️ Update Question ID {$question->question_id}: {$qData['question_text']}");
-                } else {
-                    $question = CourseTypeQuestion::create([
-                        'item_id'       => $id,
-                        'question_text' => $qData['question_text'] ?? '(empty)',
-                        'is_draft'      => 0,
-                    ]);
-                    Log::info("➕ Create Question baru: {$qData['question_text']} (ID {$question->question_id})");
-                }
-            } else {
-                $question = CourseTypeQuestion::create([
-                    'item_id'       => $id,
-                    'question_text' => $qData['question_text'] ?? '(empty)',
-                    'is_draft'      => 0,
-                ]);
-                Log::info("➕ Create Question baru: {$qData['question_text']} (ID {$question->question_id})");
-            }
+        $validated = $request->validate([
+            'questions' => 'required|array|min:1',
+            'questions.*.question_id' => 'nullable|integer|exists:course_item_questions,question_id',
+            'questions.*.question_text' => 'required|string|max:5000',
+            'questions.*.question_image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
+            'questions.*.options' => 'required|array|min:2',
+            'questions.*.options.*.option_id' => 'nullable|integer|exists:course_item_options,option_id',
+            'questions.*.options.*.option_text' => 'nullable|string|max:1000',
+            'questions.*.options.*.option_image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
+            'questions.*.options.*.is_correct' => 'required|boolean',
+        ]);
 
-            // 🔎 Update atau create Options
-            foreach ($qData['options'] as $oIndex => $opt) {
-                if (!empty($opt['option_id'])) {
-                    $option = CourseTypeOption::find($opt['option_id']);
-                    if ($option) {
-                        $option->update([
-                            'option_text' => $opt['option_text'] ?? '(empty)',
-                            'is_correct'  => !empty($opt['is_correct']) ? 1 : 0,
-                        ]);
-                        Log::info("✏️ Update Option ID {$option->option_id} (Q{$question->question_id}): {$opt['option_text']} [is_correct={$opt['is_correct']}]");
+        $relativeDirectory = 'assets/img/course/course-media/multiple-choice';
+        $uploadDirectory = public_path($relativeDirectory);
+
+        if (!is_dir($uploadDirectory) && !mkdir($uploadDirectory, 0775, true) && !is_dir($uploadDirectory)) {
+            throw new \RuntimeException('Gagal membuat direktori gambar multiple choice.');
+        }
+
+        $newFiles = [];
+        $oldFiles = [];
+
+        $storeImage = function ($file, string $prefix) use ($uploadDirectory, $relativeDirectory, &$newFiles) {
+            $filename = $prefix.'_'.Str::uuid().'.'.$file->extension();
+            $file->move($uploadDirectory, $filename);
+
+            $relativePath = $relativeDirectory.'/'.$filename;
+            $newFiles[] = $relativePath;
+
+            return $relativePath;
+        };
+
+        try {
+            $savedQuestions = DB::transaction(function () use (
+                $request,
+                $validated,
+                $id,
+                $storeImage,
+                &$oldFiles
+            ) {
+                $saved = [];
+
+                foreach ($validated['questions'] as $qIndex => $qData) {
+                    if (!empty($qData['question_id'])) {
+                        $question = CourseTypeQuestion::where('question_id', $qData['question_id'])
+                            ->where('item_id', $id)
+                            ->firstOrFail();
                     } else {
-                        $option = CourseTypeOption::create([
-                            'question_id' => $question->question_id,
-                            'option_text' => $opt['option_text'] ?? '(empty)',
-                            'is_correct'  => !empty($opt['is_correct']) ? 1 : 0,
-                        ]);
-                        Log::info("➕ Create Option baru (Q{$question->question_id}) {$oIndex}: {$option->option_text}");
+                        $question = new CourseTypeQuestion(['item_id' => $id]);
                     }
-                } else {
-                    $option = CourseTypeOption::create([
-                        'question_id' => $question->question_id,
-                        'option_text' => $opt['option_text'] ?? '(empty)',
-                        'is_correct'  => !empty($opt['is_correct']) ? 1 : 0,
-                    ]);
-                    Log::info("➕ Create Option baru (Q{$question->question_id}) {$oIndex}: {$option->option_text}");
+
+                    $question->question_text = trim($qData['question_text']);
+                    $questionImage = $request->file("questions.$qIndex.question_image");
+
+                    if ($questionImage) {
+                        if ($question->question_image) {
+                            $oldFiles[] = $question->question_image;
+                        }
+                        $question->question_image = $storeImage($questionImage, 'question');
+                    }
+
+                    $question->save();
+
+                    $hasCorrectOption = collect($qData['options'])
+                        ->contains(fn ($option) => (bool) ($option['is_correct'] ?? false));
+
+                    if (!$hasCorrectOption) {
+                        throw \Illuminate\Validation\ValidationException::withMessages([
+                            "questions.$qIndex.options" => 'Setiap pertanyaan harus memiliki satu jawaban benar.',
+                        ]);
+                    }
+
+                    foreach ($qData['options'] as $oIndex => $optionData) {
+                        if (!empty($optionData['option_id'])) {
+                            $option = CourseTypeOption::where('option_id', $optionData['option_id'])
+                                ->where('question_id', $question->question_id)
+                                ->firstOrFail();
+                        } else {
+                            $option = new CourseTypeOption([
+                                'question_id' => $question->question_id,
+                            ]);
+                        }
+
+                        $optionText = trim($optionData['option_text'] ?? '');
+                        $optionImage = $request->file("questions.$qIndex.options.$oIndex.option_image");
+
+                        if ($optionText === '' && !$optionImage && !$option->option_image) {
+                            throw \Illuminate\Validation\ValidationException::withMessages([
+                                "questions.$qIndex.options.$oIndex.option_text" => 'Isi teks atau pilih gambar untuk opsi ini.',
+                            ]);
+                        }
+
+                        $option->option_text = $optionText !== '' ? $optionText : null;
+                        $option->is_correct = (bool) ($optionData['is_correct'] ?? false);
+
+                        if ($optionImage) {
+                            if ($option->option_image) {
+                                $oldFiles[] = $option->option_image;
+                            }
+                            $option->option_image = $storeImage($optionImage, 'option');
+                        }
+
+                        $option->save();
+                    }
+
+                    $saved[] = $question->load('options');
+                }
+
+                return $saved;
+            });
+        } catch (\Throwable $exception) {
+            foreach ($newFiles as $newFile) {
+                $absolutePath = public_path($newFile);
+                if (is_file($absolutePath)) {
+                    @unlink($absolutePath);
                 }
             }
 
-            $savedQuestions[] = $question->load('options');
+            throw $exception;
+        }
+
+        foreach (array_unique($oldFiles) as $oldFile) {
+            if (!str_starts_with($oldFile, $relativeDirectory.'/')) {
+                continue;
+            }
+
+            $absolutePath = public_path($oldFile);
+            if (is_file($absolutePath)) {
+                @unlink($absolutePath);
+            }
         }
 
         return response()->json([
             'success' => true,
             'message' => 'Multiple Choice berhasil disimpan',
-            'data'    => $savedQuestions
+            'data' => $savedQuestions,
         ]);
     }
     public function DeleteMultiplyChoice(Request $request, $id) 
     {
        try {
-            $question = CourseTypeQuestion::find($id);
+            $question = CourseTypeQuestion::with('options')->find($id);
 
             if (!$question) {
                 return response()->json([
@@ -1735,11 +1809,27 @@ class CourseController extends Controller
                 ], 404);
             }
 
-            if (method_exists($question, 'options')) {
-                $question->options()->delete();
-            }
+            $imagePaths = collect([$question->question_image])
+                ->concat($question->options->pluck('option_image'))
+                ->filter()
+                ->unique();
 
-            $question->delete();
+            DB::transaction(function () use ($question) {
+                $question->options()->delete();
+                $question->delete();
+            });
+
+            $managedDirectory = 'assets/img/course/course-media/multiple-choice/';
+            foreach ($imagePaths as $imagePath) {
+                if (!str_starts_with($imagePath, $managedDirectory)) {
+                    continue;
+                }
+
+                $absolutePath = public_path($imagePath);
+                if (is_file($absolutePath)) {
+                    @unlink($absolutePath);
+                }
+            }
 
             return response()->json([
                 'success' => true,

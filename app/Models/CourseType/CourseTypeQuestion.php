@@ -13,6 +13,7 @@ class CourseTypeQuestion extends Model
     protected $fillable = [
         'item_id',
         'question_text',
+        'question_image'
     ];
 
     public function options()
