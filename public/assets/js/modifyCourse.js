@@ -484,6 +484,12 @@ export function InitModifyCourse() {
 
                 if (questions.length > 0) {
                     questions.forEach((q, qIndex) => {
+                        const storedQuestionImage = q.question_image || "";
+                        const storedQuestionImageUrl = storedQuestionImage
+                            ? (storedQuestionImage.startsWith("http") || storedQuestionImage.startsWith("/")
+                                ? storedQuestionImage
+                                : `/${storedQuestionImage}`)
+                            : "";
                         // console.log(`📝 Render Soal ${qIndex + 1}:`, q);
 
                         let html = `
@@ -494,30 +500,62 @@ export function InitModifyCourse() {
                                 <button type="button" class="btn btn-sm btn-outline-danger remove-question">🗑 Hapus Soal</button>
                             </div>
                             <div class="mb-3">
-                                <label class="form-label">Pertanyaan <span class="text-danger">*</span></label>
-                                <textarea class="form-control question-field" rows="3"
-                                    name="mc_questions[${qIndex}][question]">${q.question_text ?? ""}</textarea>
-                                <div class="invalid-feedback">Pertanyaan wajib diisi.</div>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">Opsi Jawaban <span class="text-danger">*</span></label>
-                                <div class="mc-options-container">`;
+                                 <label class="form-label fw-bold">Gambar Pertanyaan <span class="text-muted fw-normal">(Opsional)</span></label>
+                                 <input type="file" class="form-control question-image-field"
+                                     name="questions[${qIndex}][question_image]"
+                                     accept="image/jpeg,image/png,image/webp">
+                                 <div class="question-image-preview mt-2 ${storedQuestionImageUrl ? "" : "d-none"}">
+                                     <img class="img-fluid rounded border" alt="Pratinjau gambar pertanyaan"
+                                         ${storedQuestionImageUrl ? `src="${storedQuestionImageUrl}"` : ""}
+                                         ${storedQuestionImageUrl ? `data-stored-url="${storedQuestionImageUrl}"` : ""}
+                                         style="max-height: 240px; object-fit: contain;">
+                                 </div>
+                             </div>
+                             <div class="mb-3">
+                                 <label class="form-label fw-bold">Pertanyaan <span class="text-danger">*</span></label>
+                                 <textarea class="form-control question-field" rows="3"
+                                     name="questions[${qIndex}][question_text]">${q.question_text ?? ""}</textarea>
+                                 <div class="invalid-feedback">Pertanyaan wajib diisi.</div>
+                             </div>
+                             <div class="mb-3">
+                                 <label class="form-label fw-bold">Opsi Jawaban <span class="text-danger">*</span></label>
+                                 <div class="mc-options-container">`;
 
                         q.options.forEach((opt, oIndex) => {
+                            const storedOptionImage = opt.option_image || "";
+                            const storedOptionImageUrl = storedOptionImage
+                                ? (storedOptionImage.startsWith("http") || storedOptionImage.startsWith("/")
+                                    ? storedOptionImage
+                                    : `/${storedOptionImage}`)
+                                : "";
                             // console.log(`   ➡️ Opsi ${oIndex}:`, opt);
 
                             html += `
-                            <div class="input-group mb-2 option-item">
+                            <div class="option-item border rounded p-2 mb-2">
                                 <input type="hidden" class="option-id" value="${opt.option_id || ''}">
-                                <div class="input-group-text">
-                                    <input type="radio" 
-                                        name="mc_questions[${qIndex}][correct]" 
-                                        value="${oIndex}" 
-                                        ${(opt.is_correct === true || opt.is_correct === 1 || opt.is_correct === "1") ? "checked" : ""}>
+                                <div class="input-group">
+                                    <div class="input-group-text">
+                                        <input type="radio"
+                                            name="questions[${qIndex}][correct]"
+                                            value="${oIndex}"
+                                            ${(opt.is_correct === true || opt.is_correct === 1 || opt.is_correct === "1") ? "checked" : ""}>
+                                    </div>
+                                    <input type="text" class="form-control option-field"
+                                        name="questions[${qIndex}][options][${oIndex}][option_text]" value="${opt.option_text ?? ""}">
+                                    <div class="invalid-feedback">Isi teks atau pilih gambar.</div>
                                 </div>
-                                <input type="text" class="form-control option-field"
-                                    name="mc_questions[${qIndex}][options][]" value="${opt.option_text ?? ""}">
-                                <div class="invalid-feedback">Opsi wajib diisi.</div>
+                                <div class="option-image-control mt-2">
+                                    <label class="form-label small fw-bold mb-1">Gambar Opsi <span class="text-muted fw-normal">(Opsional)</span></label>
+                                    <input type="file" class="form-control form-control-sm option-image-field"
+                                        name="questions[${qIndex}][options][${oIndex}][option_image]"
+                                        accept="image/jpeg,image/png,image/webp">
+                                    <div class="option-image-preview mt-2 ${storedOptionImageUrl ? "" : "d-none"}">
+                                        <img class="img-fluid rounded border" alt="Pratinjau gambar opsi"
+                                            ${storedOptionImageUrl ? `src="${storedOptionImageUrl}"` : ""}
+                                            ${storedOptionImageUrl ? `data-stored-url="${storedOptionImageUrl}"` : ""}
+                                            style="max-height: 180px; object-fit: contain;">
+                                    </div>
+                                </div>
                             </div>`;
                         });
 
@@ -1208,122 +1246,6 @@ export function InitModifyCourse() {
         // =====================================
         xhr.send(formData);
     });
-
-    // ===============================
-    // Mandatory + SAVE MULTIPLE CHOICE
-    // ===============================
-    // Original Code
-    // document.getElementById("saveMcBtn")?.addEventListener("click", async function (e) {
-    //     e.preventDefault();
-    //     let isValid = true;
-
-    //     const itemId = document.getElementById("mc_item_id").value;
-    //     const questions = [];
-
-    //     const questionEls = document.querySelectorAll("#mcQuestionsContainer .mc-question");
-    //     // console.log("🔎 Jumlah soal di container:", questionEls.length);
-
-    //     if (questionEls.length === 0) {
-    //         alert("❌ Minimal 1 soal wajib ditambahkan.");
-    //         return;
-    //     }
-
-    //     questionEls.forEach((qEl, qIndex) => {
-    //         const questionField = qEl.querySelector(".question-field");
-    //         const questionText = questionField?.value.trim() || "";
-    //         const questionId = qEl.querySelector(".question-id")?.value || null;
-
-    //         // console.log(`📝 Soal[${qIndex}] -> ID: ${questionId}, Text: ${questionText}`);
-
-    //         if (!questionText) {
-    //             questionField?.classList.add("is-invalid");
-    //             isValid = false;
-    //         } else {
-    //             questionField?.classList.remove("is-invalid");
-    //         }
-
-    //         const options = [];
-    //         let hasCorrect = false; // ✅ track apakah ada jawaban benar
-
-    //         qEl.querySelectorAll(".option-item").forEach((optEl, oIndex) => {
-    //             const optionId = optEl.querySelector(".option-id")?.value || null;
-    //             const radio = optEl.querySelector("input[type='radio']");
-    //             const textInput = optEl.querySelector(".option-field");
-    //             const textValue = textInput?.value.trim() || "";
-
-    //             const isCorrect = radio ? !!radio.checked : false;
-    //             if (isCorrect) hasCorrect = true; // ✅ tandai kalau ada yang benar
-
-    //             options.push({
-    //                 option_id: optionId,
-    //                 option_text: textValue || "(empty)",
-    //                 is_correct: isCorrect,
-    //             });
-
-    //             // console.log(`   ➡️ Opsi[${qIndex}][${oIndex}] ->`, {
-    //             //     option_id: optionId,
-    //             //     option_text: textValue,
-    //             //     is_correct: isCorrect,
-    //             // });
-
-    //             if (!textValue) {
-    //                 textInput?.classList.add("is-invalid");
-    //                 isValid = false;
-    //             } else {
-    //                 textInput?.classList.remove("is-invalid");
-    //             }
-    //         });
-
-    //         // ✅ Validasi harus ada minimal 1 jawaban benar
-    //         if (!hasCorrect) {
-    //             // console.warn(`❌ Soal[${qIndex}] belum punya jawaban benar!`);
-    //             alert(`❌ Soal ${qIndex + 1} belum punya jawaban yang ditandai benar!`);
-    //             isValid = false;
-    //         }
-
-    //         questions.push({
-    //             item_id: itemId,
-    //             question_id: questionId,
-    //             question_text: questionText || "(empty)",
-    //             options,
-    //         });
-    //     });
-
-    //     if (!isValid) {
-    //         // console.warn("❌ Validasi gagal, tidak bisa kirim ke server.");
-    //         return;
-    //     }
-
-    //     // console.log("📦 Payload final yang akan dikirim:", questions);
-
-    //     try {
-    //         const res = await fetch(`/modify-course/item/${itemId}/choice`, {
-    //             method: "POST",
-    //             headers: {
-    //                 "Content-Type": "application/json",
-    //                 "Accept": "application/json",
-    //                 "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').content,
-    //             },
-    //             body: JSON.stringify({ questions }),
-    //         });
-
-    //         const data = await res.json();
-    //         // console.log("📥 Response dari server:", data);
-
-    //         if (!res.ok || !data.success) {
-    //             alert("❌ Gagal menyimpan soal: " + (data.message || "server error"));
-    //             return;
-    //         }
-
-    //         alert(data.message || "✅ Soal Multiple Choice berhasil disimpan!");
-    //         bootstrap.Modal.getInstance(document.getElementById("MultiplyChoiceItemModal")).hide();
-    //         bootstrap.Modal.getOrCreateInstance(document.getElementById("modifyModal")).show();
-    //     } catch (err) {
-    //         // console.error("💥 Fetch error:", err);
-    //         alert("Error: " + err.message);
-    //     }
-    // });
-    // Modified 1.4.1
     document.getElementById("saveMcBtn")?.addEventListener("click", async function (e) {
         e.preventDefault();
     
@@ -1353,7 +1275,7 @@ export function InitModifyCourse() {
             return;
         }
     
-        const questions = [];
+        const formData = new FormData();
         const questionEls = document.querySelectorAll("#mcQuestionsContainer .mc-question");
     
         if (questionEls.length === 0) {
@@ -1365,6 +1287,7 @@ export function InitModifyCourse() {
             const questionField = qEl.querySelector(".question-field");
             const questionText = questionField?.value.trim() || "";
             const questionId = qEl.querySelector(".question-id")?.value || null;
+            const questionImage = qEl.querySelector(".question-image-field")?.files?.[0];
     
             if (!questionText) {
                 questionField?.classList.add("is-invalid");
@@ -1373,30 +1296,45 @@ export function InitModifyCourse() {
                 questionField?.classList.remove("is-invalid");
             }
     
-            const options = [];
+            if (questionId) {
+                formData.append(`questions[${qIndex}][question_id]`, questionId);
+            }
+            formData.append(`questions[${qIndex}][question_text]`, questionText);
+            if (questionImage) {
+                formData.append(`questions[${qIndex}][question_image]`, questionImage);
+            }
+
             let hasCorrect = false;
     
-            qEl.querySelectorAll(".option-item").forEach((optEl) => {
+            qEl.querySelectorAll(".option-item").forEach((optEl, oIndex) => {
                 const optionId = optEl.querySelector(".option-id")?.value || null;
                 const radio = optEl.querySelector("input[type='radio']");
                 const textInput = optEl.querySelector(".option-field");
                 const textValue = textInput?.value.trim() || "";
+                const imageInput = optEl.querySelector(".option-image-field");
+                const optionImage = imageInput?.files?.[0];
+                const existingImage = optEl.querySelector(".option-image-preview img")?.getAttribute("src");
     
                 const isCorrect = radio ? radio.checked : false;
                 if (isCorrect) hasCorrect = true;
     
-                if (!textValue) {
+                if (!textValue && !optionImage && !existingImage) {
                     textInput?.classList.add("is-invalid");
+                    imageInput?.classList.add("is-invalid");
                     isValid = false;
                 } else {
                     textInput?.classList.remove("is-invalid");
+                    imageInput?.classList.remove("is-invalid");
                 }
     
-                options.push({
-                    option_id: optionId,
-                    option_text: textValue,
-                    is_correct: isCorrect,
-                });
+                if (optionId) {
+                    formData.append(`questions[${qIndex}][options][${oIndex}][option_id]`, optionId);
+                }
+                formData.append(`questions[${qIndex}][options][${oIndex}][option_text]`, textValue);
+                formData.append(`questions[${qIndex}][options][${oIndex}][is_correct]`, isCorrect ? "1" : "0");
+                if (optionImage) {
+                    formData.append(`questions[${qIndex}][options][${oIndex}][option_image]`, optionImage);
+                }
             });
     
             if (!hasCorrect) {
@@ -1404,12 +1342,6 @@ export function InitModifyCourse() {
                 isValid = false;
             }
     
-            questions.push({
-                item_id: itemId,
-                question_id: questionId, // ✅ tetap kirim ID
-                question_text: questionText,
-                options
-            });
         });
     
         if (!isValid) {
@@ -1423,11 +1355,10 @@ export function InitModifyCourse() {
             const res = await fetch(`/modify-course/item/${itemId}/choice`, {
                 method: "POST",
                 headers: {
-                    "Content-Type": "application/json",
                     "Accept": "application/json",
                     "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').content,
                 },
-                body: JSON.stringify({ questions }),
+                body: formData,
             });
     
             const data = await res.json();
@@ -1450,120 +1381,6 @@ export function InitModifyCourse() {
         }
     });
     
-    // document.getElementById("saveMcBtn")?.addEventListener("click", async function (e) {
-    //     e.preventDefault();
-
-    //     const saveBtn = this;
-    //     const originalText = saveBtn.innerHTML;
-
-    //     // ⛔ disable button
-    //     saveBtn.disabled = true;
-    //     saveBtn.innerHTML = `
-    //         <span class="spinner-border spinner-border-sm me-2"></span>
-    //         Sedang Menyimpan...
-    //     `;
-
-    //     function resetButton() {
-    //         saveBtn.disabled = false;
-    //         saveBtn.innerHTML = originalText;
-    //     }
-
-    //     let isValid = true;
-
-    //     const itemId = document.getElementById("mc_item_id").value;
-    //     const questions = [];
-
-    //     const questionEls = document.querySelectorAll("#mcQuestionsContainer .mc-question");
-
-    //     if (questionEls.length === 0) {
-    //         alert("❌ Minimal 1 soal wajib ditambahkan.");
-    //         resetButton(); // ❗ FIX
-    //         return;
-    //     }
-
-    //     questionEls.forEach((qEl, qIndex) => {
-    //         const questionField = qEl.querySelector(".question-field");
-    //         const questionText = questionField?.value.trim() || "";
-
-    //         if (!questionText) {
-    //             questionField?.classList.add("is-invalid");
-    //             isValid = false;
-    //         } else {
-    //             questionField?.classList.remove("is-invalid");
-    //         }
-
-    //         const options = [];
-    //         let hasCorrect = false;
-
-    //         qEl.querySelectorAll(".option-item").forEach(optEl => {
-    //             const radio = optEl.querySelector("input[type='radio']");
-    //             const textInput = optEl.querySelector(".option-field");
-    //             const textValue = textInput?.value.trim() || "";
-
-    //             if (radio?.checked) hasCorrect = true;
-
-    //             if (!textValue) {
-    //                 textInput?.classList.add("is-invalid");
-    //                 isValid = false;
-    //             } else {
-    //                 textInput?.classList.remove("is-invalid");
-    //             }
-
-    //             options.push({
-    //                 option_text: textValue || "(empty)",
-    //                 is_correct: !!radio?.checked
-    //             });
-    //         });
-
-    //         if (!hasCorrect) {
-    //             alert(`❌ Soal ${qIndex + 1} belum punya jawaban yang benar!`);
-    //             isValid = false;
-    //         }
-
-    //         questions.push({
-    //             item_id: itemId,
-    //             question_text: questionText,
-    //             options,
-    //         });
-    //     });
-
-    //     if (!isValid) {
-    //         console.warn("❌ Validasi gagal.");
-    //         resetButton(); // ❗ FIX
-    //         return;
-    //     }
-
-    //     try {
-    //         const res = await fetch(`/modify-course/item/${itemId}/choice`, {
-    //             method: "POST",
-    //             headers: {
-    //                 "Content-Type": "application/json",
-    //                 "Accept": "application/json",
-    //                 "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').content,
-    //             },
-    //             body: JSON.stringify({ questions }),
-    //         });
-
-    //         const data = await res.json();
-
-    //         if (!res.ok || !data.success) {
-    //             alert("❌ Gagal menyimpan soal.");
-    //             resetButton(); // ❗ FIX
-    //             return;
-    //         }
-
-    //         alert("✅ Soal berhasil disimpan!");
-    //         bootstrap.Modal.getInstance(
-    //             document.getElementById("MultiplyChoiceItemModal")
-    //         ).hide();
-
-    //     } catch (err) {
-    //         console.error(err);
-    //         alert("❌ Terjadi error.");
-    //     } finally {
-    //         resetButton(); // ✅ selalu aman
-    //     }
-    // });
     // ===============================
     // VALIDASI + SIMPAN FORUM DISKUSI + PROGRESS BAR
     // ===============================
@@ -1766,43 +1583,96 @@ export function InitModifyCourse() {
         questionDiv.dataset.index = index;
         questionDiv.innerHTML = `
             <input type="hidden" class="question-id" value="">
-
             <div class="d-flex justify-content-between align-items-center mb-2">
                 <h6 class="fw-bold">Soal ${index + 1}</h6>
                 <button type="button" class="btn btn-sm btn-outline-danger remove-question">🗑 Hapus Soal</button>
             </div>   
-            
+             <!-- Gambar Pertanyaan -->
+             <div class="mb-3">
+                 <label class="form-label fw-bold">Gambar Pertanyaan <span class="text-muted fw-normal">(Opsional)</span></label>
+                 <input type="file" class="form-control question-image-field"
+                     name="questions[${index}][question_image]"
+                     accept="image/jpeg,image/png,image/webp">
+                 <div class="question-image-preview mt-2 d-none">
+                     <img class="img-fluid rounded border" alt="Pratinjau gambar pertanyaan"
+                         style="max-height: 240px; object-fit: contain;">
+                 </div>
+             </div>
             <!-- Pertanyaan -->
+             <div class="mb-3">
+                 <label class="form-label fw-bold">Pertanyaan <span class="text-danger">*</span></label>
+                 <textarea class="form-control question-field" rows="3"
+                     name="questions[${index}][question_text]" placeholder="Tulis pertanyaan di sini..."></textarea>
+                 <div class="invalid-feedback">Pertanyaan wajib diisi.</div>
+             </div>
+             <!-- Opsi Jawaban -->
             <div class="mb-3">
-                <label class="form-label">Pertanyaan <span class="text-danger">*</span></label>
-                <textarea class="form-control question-field" rows="3" 
-                    name="mc_questions[${index}][question]" placeholder="Tulis pertanyaan di sini..."></textarea>
-                <div class="invalid-feedback">Pertanyaan wajib diisi.</div>
-            </div>
-
-            <!-- Opsi Jawaban -->
-            <div class="mb-3">
-                <label class="form-label">Opsi Jawaban <span class="text-danger">*</span></label>
+                <label class="form-label fw-bold">Opsi Jawaban <span class="text-danger">*</span></label>
                 <div class="mc-options-container">
-
                    ${["A", "B", "C", "D"].map((letter, i) => `
-                    <div class="input-group mb-2 option-item">
+                    <div class="option-item border rounded p-2 mb-2">
                         <input type="hidden" class="option-id" value="">
-                        <div class="input-group-text">
-                            <input type="radio" name="mc_questions[${index}][correct]" value="${i}">
+                        <div class="input-group">
+                            <div class="input-group-text">
+                                <input type="radio" name="questions[${index}][correct]" value="${i}">
+                            </div>
+                            <input type="text" class="form-control option-field"
+                                name="questions[${index}][options][${i}][option_text]" placeholder="Opsi ${letter}">
+                            <div class="invalid-feedback">Isi teks atau pilih gambar.</div>
                         </div>
-                        <input type="text" class="form-control option-field" 
-                            name="mc_questions[${index}][options][]" placeholder="Opsi ${letter}">
-                        <div class="invalid-feedback">Opsi wajib diisi.</div>
+                        <div class="option-image-control mt-2">
+                            <label class="form-label small fw-bold mb-1">Gambar Opsi <span class="text-muted fw-normal">(Opsional)</span></label>
+                            <input type="file" class="form-control form-control-sm option-image-field"
+                                name="questions[${index}][options][${i}][option_image]"
+                                accept="image/jpeg,image/png,image/webp">
+                            <div class="option-image-preview mt-2 d-none">
+                                <img class="img-fluid rounded border" alt="Pratinjau gambar opsi"
+                                    style="max-height: 180px; object-fit: contain;">
+                            </div>
+                        </div>
                     </div>
                 `).join("")}
                 </div>
             </div>
         `;
-        questionsContainer.appendChild(questionDiv);
-    });
+         questionsContainer.appendChild(questionDiv);
+     });
 
-    // --- Delegasi Event (tambah opsi / hapus soal) ---
+     questionsContainer?.addEventListener("change", (e) => {
+         const isQuestionImage = e.target.classList.contains("question-image-field");
+         const isOptionImage = e.target.classList.contains("option-image-field");
+         if (!isQuestionImage && !isOptionImage) return;
+
+         const input = e.target;
+         const preview = isQuestionImage
+             ? input.closest(".mb-3").querySelector(".question-image-preview")
+             : input.closest(".option-image-control").querySelector(".option-image-preview");
+         const image = preview.querySelector("img");
+         const file = input.files?.[0];
+
+         if (image.dataset.previewUrl) {
+             URL.revokeObjectURL(image.dataset.previewUrl);
+             delete image.dataset.previewUrl;
+         }
+
+         if (!file) {
+             if (image.dataset.storedUrl) {
+                 image.src = image.dataset.storedUrl;
+                 preview.classList.remove("d-none");
+             } else {
+                 image.removeAttribute("src");
+                 preview.classList.add("d-none");
+             }
+             return;
+         }
+
+         const previewUrl = URL.createObjectURL(file);
+         image.src = previewUrl;
+         image.dataset.previewUrl = previewUrl;
+         preview.classList.remove("d-none");
+     });
+
+     // --- Delegasi Event (tambah opsi / hapus soal) ---
     document.addEventListener("click", (e) => {
         // Tambah opsi baru
         if (e.target.classList.contains("add-option")) {
@@ -1812,12 +1682,28 @@ export function InitModifyCourse() {
             const optionCount = optionsContainer.querySelectorAll(".option-item").length;
 
             const optionDiv = document.createElement("div");
-            optionDiv.className = "input-group mb-2 option-item";
+            optionDiv.className = "option-item border rounded p-2 mb-2";
             optionDiv.innerHTML = `
-                <div class="input-group-text">
-                    <input type="radio" name="mc_questions[${index}][correct]" value="${optionCount}">
+                <input type="hidden" class="option-id" value="">
+                <div class="input-group">
+                    <div class="input-group-text">
+                        <input type="radio" name="questions[${index}][correct]" value="${optionCount}">
+                    </div>
+                    <input type="text" class="form-control option-field"
+                        name="questions[${index}][options][${optionCount}][option_text]"
+                        placeholder="Opsi ${String.fromCharCode(65 + optionCount)}">
+                    <div class="invalid-feedback">Isi teks atau pilih gambar.</div>
                 </div>
-                <input type="text" class="form-control" name="mc_questions[${index}][options][]" placeholder="Opsi ${String.fromCharCode(65 + optionCount)}">
+                <div class="option-image-control mt-2">
+                    <label class="form-label small fw-bold mb-1">Gambar Opsi <span class="text-muted fw-normal">(Opsional)</span></label>
+                    <input type="file" class="form-control form-control-sm option-image-field"
+                        name="questions[${index}][options][${optionCount}][option_image]"
+                        accept="image/jpeg,image/png,image/webp">
+                    <div class="option-image-preview mt-2 d-none">
+                        <img class="img-fluid rounded border" alt="Pratinjau gambar opsi"
+                            style="max-height: 180px; object-fit: contain;">
+                    </div>
+                </div>
             `;
             optionsContainer.appendChild(optionDiv);
         }
@@ -1837,19 +1723,27 @@ export function InitModifyCourse() {
                     if (title) title.textContent = `Soal ${newIndex + 1}`;
 
                     // Update semua name input (textarea, radio, opsi)
-                    const textarea = qEl.querySelector("textarea");
-                    if (textarea) textarea.name = `mc_questions[${newIndex}][question]`;
+                     const textarea = qEl.querySelector("textarea");
+                     if (textarea) textarea.name = `questions[${newIndex}][question_text]`;
 
-                    qEl.querySelectorAll(".option-item").forEach((optEl, optIndex) => {
+                     const imageInput = qEl.querySelector(".question-image-field");
+                     if (imageInput) imageInput.name = `questions[${newIndex}][question_image]`;
+
+                     qEl.querySelectorAll(".option-item").forEach((optEl, optIndex) => {
                         const radio = optEl.querySelector("input[type=radio]");
                         const textInput = optEl.querySelector("input[type=text]");
 
                         if (radio) {
-                            radio.name = `mc_questions[${newIndex}][correct]`;
+                            radio.name = `questions[${newIndex}][correct]`;
                             radio.value = optIndex;
                         }
                         if (textInput) {
-                            textInput.name = `mc_questions[${newIndex}][options][]`;
+                            textInput.name = `questions[${newIndex}][options][${optIndex}][option_text]`;
+                        }
+
+                        const optionImageInput = optEl.querySelector(".option-image-field");
+                        if (optionImageInput) {
+                            optionImageInput.name = `questions[${newIndex}][options][${optIndex}][option_image]`;
                         }
                     });
                 });
