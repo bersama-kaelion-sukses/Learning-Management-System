@@ -101,15 +101,15 @@ export function InitCourseEnrollment() {
 
         // ambil atribut dari item
         const name   = el.dataset.name || "Tanpa Judul";
-        const desc   = el.dataset.desc || "Tidak ada deskripsi.";
+        const desc   = hasQuizValue(el.dataset.desc) ? el.dataset.desc : "Tidak ada deskripsi.";
         const file   = el.dataset.file || null;
         const type   = el.dataset.type || null;
         const itemId = el.dataset.itemId || null;
         const essayId = el.dataset.essayId || null;
-        const essayTitle = el.dataset.essayTitle || "Tanpa judul esai";
+        const essayTitle = name;
         const essayType = el.dataset.essayType || null;
         const essayAttach = el.dataset.essayAttach || null;
-        const instruction = el.dataset.essayInstruction || "Tidak ada instruksi.";
+        const instruction = hasQuizValue(el.dataset.desc) ? el.dataset.desc : "Tidak ada instruksi.";
         const forumTitle = el.dataset.forumTitle || "Forum Diskusi";
         const forumQuestion = el.dataset.forumQuestion || "Tidak ada pertanyaan forum.";
         const forumAttachType  = el.dataset.forumAttachmentType || null;
@@ -172,7 +172,7 @@ export function InitCourseEnrollment() {
             canStart = true,
             disabledMessage = "Mode Preview — aktivitas tidak dapat dimulai.",
             isRetry = false,
-            note = "Komponen kursus ini digunakan untuk menguji pemahaman Anda terkait materi. Anda mempunyai kesempatan 3 kali percobaan. Jika Anda gagal, silakan hubungi Admin.",
+            note = "",
             infoTitle = "Informasi Penugasan",
             infoRows = [],
         }) {
@@ -355,53 +355,52 @@ export function InitCourseEnrollment() {
             instruction: instruction
         };
 
-       function autoSubmitEssay(itemId, essayId, answerText = "") {
+        let essaySubmitting = false;
+        let essaySubmitted = false;
+        let essayTimer = null;
 
-        // console.log("⏳ Auto-submitting essay...");
-
-        const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
-
-        fetch(`/course/${itemId}/essay-submission`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "X-CSRF-TOKEN": csrfToken
-            },
-            body: JSON.stringify({
-                essay_id: essayId,
-                item_id: itemId,
-                answer_text: answerText || ""
-            })
-        })
-        .then(res => res.json())
-        .then(json => {
-            if (json.success) {
-                // console.log("📨 Auto-submit success");
-
-                // Mark as submitted
-                localStorage.setItem(`essay-${itemId}-submitted`, "true");
-
-                // UI lock
-                const textarea = document.getElementById("answer_text");
-                const submitBtn = document.getElementById("submit-essay-btn");
-
-                if (textarea) textarea.readOnly = true;
-                if (submitBtn) {
-                    submitBtn.disabled = true;
-                    submitBtn.textContent = "⏳ Jawaban terkirim otomatis";
-                }
-
-                // Reload answer thread
-                loadSubmissions(itemId, window.currentUserId);
-
-            } else {
-                // console.error("❌ Auto-submit failed:", json);
+        async function autoSubmitEssay(itemId, essayId, answerText = "") {
+            if (essaySubmitting || essaySubmitted || previewMode) return;
+            const submitBtn = document.getElementById("submit-essay-btn");
+            const textarea = document.getElementById("answer_text");
+            essaySubmitting = true;
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.textContent = "Mengirim...";
             }
-        })
-        .catch(err => {
-            // console.error("❌ Auto-submit error:", err);
-        });
-    }
+            if (textarea) textarea.readOnly = true;
+
+            try {
+                const response = await fetch(`/course/${itemId}/essay-submission`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Accept": "application/json",
+                        "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').content,
+                    },
+                    body: JSON.stringify({ essay_id: hasQuizValue(essayId) ? essayId : null, item_id: itemId, answer_text: answerText }),
+                });
+                const json = await response.json();
+                if (!response.ok || !json.success) {
+                    throw new Error(json.message || "Jawaban gagal dikirim. Silakan coba lagi.");
+                }
+                essaySubmitted = true;
+                clearInterval(essayTimer);
+                localStorage.setItem(storageKeySubmit, "true");
+                localStorage.removeItem(storageKeyEnd);
+                if (submitBtn) submitBtn.textContent = "Jawaban sudah terkirim";
+            } catch (error) {
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = "Kirim";
+                }
+                if (textarea) textarea.readOnly = false;
+                alert(error.message || "Jawaban gagal dikirim. Silakan coba lagi.");
+            } finally {
+                essaySubmitting = false;
+            }
+            if (essaySubmitted) loadSubmissions(itemId, window.currentUserId, essayDuration);
+        }
 
         //    console.log("📌 ESSAY OBJECT:", essay);
 
@@ -412,12 +411,12 @@ export function InitCourseEnrollment() {
             .then(res => res.json())
             .then(data => {
                 const userSubmissions = data.filter(sub => sub.user?.user_id == window.currentUserId);
-                const hasNormalSubmission = userSubmissions.some(sub => parseInt(sub.is_remedial) == 0);
+                const hasEssaySubmission = userSubmissions.length > 0;
                 const storedEndTime = localStorage.getItem(storageKeyEnd);
 
                 let alreadySubmitted = localStorage.getItem(storageKeySubmit);
 
-                if (!hasNormalSubmission) {
+                if (!hasEssaySubmission) {
                     alreadySubmitted = "false";
                     localStorage.removeItem(storageKeySubmit);
                 } else {
@@ -444,7 +443,7 @@ export function InitCourseEnrollment() {
                 // 🧩 Tampilkan prescreen
                 if (essayDuration > 0) {
                     const essayUsedAttempts = userSubmissions.length;
-                    const essayRemainingAttempts = Math.max(0, courseItemMaxAttempts - essayUsedAttempts);
+                    const essayRemainingAttempts = Math.max(0, 1 - essayUsedAttempts);
                     detailPanel.innerHTML = content + renderCourseItemPreviewCard({
                         id: "essay-prescreen",
                         typeLabel: "Esai",
@@ -455,13 +454,13 @@ export function InitCourseEnrollment() {
                         disabledMessage: "Mode Preview — esai tidak dapat dimulai.",
                         isRetry: essayUsedAttempts > 0,
                         disabledMessage: essayRemainingAttempts <= 0
-                            ? `Anda telah mencapai batas maksimal ${courseItemMaxAttempts} percobaan.`
+                            ? "Esai hanya dapat dikirim satu kali."
                             : "Mode Preview — esai tidak dapat dimulai.",
-                        note: `Komponen kursus ini digunakan untuk menguji pemahaman Anda terkait materi. Anda mempunyai kesempatan 3 kali percobaan. Jika Anda gagal, silakan hubungi Admin.<div class="mt-2"><span class="fw-semibold">Instruksi:</span> ${instruction || "Tidak ada instruksi."}</div>`,
+                        note: `Esai hanya dapat dikirim satu kali. Periksa jawaban Anda sebelum mengirim. Jawaban akan dinilai oleh instruktur.<div class="mt-2"><span class="fw-semibold">Instruksi Esai:</span> ${instruction}</div>`,
                         infoTitle: "Informasi Penugasan",
                         infoRows: [
                             { icon: "◷", label: "Batas Waktu", value: formatCourseItemDue(el.dataset.courseEnd) },
-                            { icon: "◎", label: "Sisa Percobaan", value: `${essayRemainingAttempts}/${courseItemMaxAttempts}` },
+                            { icon: "◎", label: "Sisa Percobaan", value: `${essayRemainingAttempts}/1` },
                         ],
                     });
 
@@ -496,7 +495,7 @@ export function InitCourseEnrollment() {
                     });
                 } else {
                     const essayUsedAttempts = userSubmissions.length;
-                    const essayRemainingAttempts = Math.max(0, courseItemMaxAttempts - essayUsedAttempts);
+                    const essayRemainingAttempts = Math.max(0, 1 - essayUsedAttempts);
                     detailPanel.innerHTML = content + renderCourseItemPreviewCard({
                         id: "essay-prescreen",
                         typeLabel: "Esai",
@@ -505,14 +504,14 @@ export function InitCourseEnrollment() {
                         buttonText: essayUsedAttempts > 0 ? "Coba Lagi" : "Mulai Penugasan",
                         canStart: !previewMode && essayRemainingAttempts > 0,
                         disabledMessage: essayRemainingAttempts <= 0
-                            ? `Anda telah mencapai batas maksimal ${courseItemMaxAttempts} percobaan.`
+                            ? "Esai hanya dapat dikirim satu kali."
                             : "Mode Preview — esai tidak dapat dimulai.",
                         isRetry: essayUsedAttempts > 0,
-                        note: `Komponen kursus ini digunakan untuk menguji pemahaman Anda terkait materi. Anda mempunyai kesempatan 3 kali percobaan. Jika Anda gagal, silakan hubungi Admin.<div class="mt-2"><span class="fw-semibold">Instruksi:</span> ${instruction || "Tidak ada instruksi."}</div>`,
+                        note: `Esai hanya dapat dikirim satu kali. Periksa jawaban Anda sebelum mengirim. Jawaban akan dinilai oleh instruktur.<div class="mt-2"><span class="fw-semibold">Instruksi Esai:</span> ${instruction}</div>`,
                         infoTitle: "Informasi Penugasan",
                         infoRows: [
                             { icon: "◷", label: "Batas Waktu", value: formatCourseItemDue(el.dataset.courseEnd) },
-                            { icon: "◎", label: "Sisa Percobaan", value: `${essayRemainingAttempts}/${courseItemMaxAttempts}` },
+                            { icon: "◎", label: "Sisa Percobaan", value: `${essayRemainingAttempts}/1` },
                         ],
                     });
 
@@ -646,7 +645,7 @@ export function InitCourseEnrollment() {
                 <div class="d-flex align-items-stretch mt-3">
                     <textarea id="answer_text" class="form-control me-2" rows="3"
                         placeholder="Tulis jawaban Anda di sini..." ${isReadOnly ? "readonly" : ""}></textarea>
-                    <button class="btn btn-secondary h-100" id="submit-essay-btn"
+                    <button type="button" class="btn btn-secondary h-100" id="submit-essay-btn"
                             data-essay-id="${essayId}" data-item-id="${itemId}" ${isReadOnly ? "disabled" : ""}>
                         ${isReadOnly ? "✅ Jawaban sudah terkirim" : "Kirim"}
                     </button>
@@ -675,7 +674,7 @@ export function InitCourseEnrollment() {
 
             if (essayDuration > 0 && endTime && !isReadOnly) {
                 const countdownEl = document.getElementById("essay-countdown");
-                const timer = setInterval(() => {
+                essayTimer = setInterval(() => {
                     const remaining = Math.max(0, Math.floor((endTime - Date.now()) / 1000));
                     const mins = Math.floor(remaining / 60);
                     const secs = remaining % 60;
@@ -683,11 +682,7 @@ export function InitCourseEnrollment() {
                     countdownEl.textContent = `${mins}:${secs.toString().padStart(2, "0")}`;
 
                     if (remaining <= 0) {
-                        clearInterval(timer);
-                        localStorage.removeItem(storageKeyEnd);
-                        submitBtn.disabled = true;
-                        textarea.readOnly = true;
-                        submitBtn.textContent = "⏳ Mengirim otomatis...";
+                        clearInterval(essayTimer);
                         autoSubmitEssay(itemId, essayId, textarea.value);
                     }
                 }, 1000);
@@ -699,14 +694,7 @@ export function InitCourseEnrollment() {
             if (!isReadOnly && submitBtn) {
                 submitBtn.addEventListener("click", (e) => {
                     e.preventDefault();
-                    submitBtn.disabled = true;
-                    textarea.readOnly = true;
-                    submitBtn.textContent = "✅ Jawaban terkirim";
-
-                    localStorage.setItem(storageKeySubmit, "true");
-                    localStorage.removeItem(storageKeyEnd);
-
-                    loadSubmissions(itemId, window.currentUserId, essayDuration);
+                    autoSubmitEssay(itemId, essayId, textarea.value);
                 });
             }
 
@@ -1106,8 +1094,9 @@ export function InitCourseEnrollment() {
                     : "";
 
                 let html = `
-                    <div class="d-flex justify-content-between mb-2 align-items-center">
-                        <h6>Soal ${index + 1} dari ${totalQ}</h6>
+                    <section class="quiz-exam" aria-label="Soal quiz">
+                    <div class="quiz-exam-header">
+                        <h6 class="quiz-exam-counter mb-0">Soal <strong>${index + 1}</strong> dari ${totalQ}</h6>
                         ${timeDisplay}
                     </div>
                     ${progressHtml}
@@ -1141,13 +1130,19 @@ export function InitCourseEnrollment() {
                 });
 
                 html += `</form>
-                    <div class="d-flex justify-content-between mt-3">
-                        <button class="btn btn-secondary btn-sm" id="prev-question-btn"
-                            ${index === 0 ? 'style="display:none;"' : ''}>Sebelumnya</button>
-                        <button class="btn btn-warning btn-sm" id="next-question-btn">
-                            ${index + 1 === totalQ ? "Selesai" : "Selanjutnya"}
+                    <nav class="quiz-exam-navigation" aria-label="Navigasi soal">
+                        <p class="quiz-exam-hint text-muted mb-0">${index + 1 === totalQ
+                            ? "Periksa jawaban Anda sebelum mengirim quiz."
+                            : "Pilih jawaban, lalu lanjutkan ke soal berikutnya."}</p>
+                        <div class="quiz-exam-actions">
+                        <button type="button" class="btn btn-outline-secondary" id="prev-question-btn"
+                            ${index === 0 ? 'disabled' : ''}><span aria-hidden="true">&#8592;</span> Sebelumnya</button>
+                        <button type="button" class="btn btn-primary" id="next-question-btn">
+                            ${index + 1 === totalQ ? "Kirim Jawaban Quiz" : 'Selanjutnya <span aria-hidden="true">&#8594;</span>'}
                         </button>
-                    </div>`;
+                        </div>
+                    </nav>
+                    </section>`;
 
                 const container = ensureQuizContainer();
                 container.innerHTML = html;
@@ -1187,13 +1182,13 @@ export function InitCourseEnrollment() {
 
                         if (!submitResult || typeof submitResult.catch !== "function") {
                             nextBtn.disabled = false;
-                            nextBtn.textContent = "Selesai";
+                            nextBtn.textContent = "Kirim Jawaban Quiz";
                             return;
                         }
 
                         submitResult.catch(() => {
                                 nextBtn.disabled = false;
-                                nextBtn.textContent = "Selesai";
+                                nextBtn.textContent = "Kirim Jawaban Quiz";
                             })
                             .finally(() => {
                                 if (document.body.contains(nextBtn)) {
@@ -1201,7 +1196,7 @@ export function InitCourseEnrollment() {
                                     window.__QUIZ_SUBMITTED__ ??= {};
                                     delete window.__QUIZ_SUBMITTED__[itemId];
                                     nextBtn.disabled = false;
-                                    nextBtn.textContent = "Selesai";
+                                    nextBtn.textContent = "Kirim Jawaban Quiz";
                                 }
                             });
 
@@ -1365,7 +1360,7 @@ export function InitCourseEnrollment() {
                     ? `Anda telah mencapai batas maksimal ${courseItemMaxAttempts} percobaan.`
                     : "Mode Preview — Quiz tidak dapat dimulai.",
                 isRetry: attempts.length > 0,
-                note: `${quizNote}${renderQuizAttemptHistory(attempts, requiredGrade)}`,
+                note: `${quizNote}<div class="mt-2">Anda mempunyai kesempatan ${courseItemMaxAttempts} kali percobaan untuk Quiz ini. Jika kesempatan habis, silakan hubungi Admin.</div><div class="mt-2"><span class="fw-semibold">Instruksi Quiz:</span> ${desc}</div>${renderQuizAttemptHistory(attempts, requiredGrade)}`,
                 infoTitle: "Informasi Penugasan",
                 infoRows: [
                     { icon: "◷", label: "Batas Waktu", value: formatCourseItemDue(el.dataset.courseEnd) },
@@ -1870,7 +1865,7 @@ export function InitCourseEnrollment() {
 
                         <div class="assignment-preview-body">
                             <div class="assignment-preview-note">
-                                Komponen kursus ini digunakan untuk menguji pemahaman Anda terkait materi. Anda mempunyai kesempatan 3 kali percobaan. Jika Anda gagal, silakan hubungi Admin.
+                                Unggah berkas jawaban sesuai instruksi tugas. Berkas akan dinilai oleh instruktur. Pengiriman ulang mengikuti status remedial dan sisa kesempatan yang tersedia.<div class="mt-2"><span class="fw-semibold">Instruksi Unggahan Tugas:</span> ${desc}</div>
                             </div>
                             <aside class="assignment-info-card border rounded bg-white">
                                 <h6 class="fw-bold mb-3">Informasi Penugasan</h6>
@@ -3480,55 +3475,6 @@ export function InitCourseEnrollment() {
         }
     });
 
-    // =================================================
-    // Handler khusus untuk essay submission (AJAX POST)
-    // =================================================
-    document.addEventListener("click", function (e) {
-            if (e.target && e.target.id === "submit-essay-btn") {
-                e.preventDefault();
-
-                const essayId = e.target.getAttribute("data-essay-id");
-                const itemId = e.target.getAttribute("data-item-id");
-                const answerText = document.getElementById("answer_text").value;
-
-                const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
-
-            fetch(`/course/${itemId}/essay-submission`, {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "X-CSRF-TOKEN": csrfToken
-                    },
-                    body: JSON.stringify({
-                        essay_id: essayId,
-                        item_id: itemId,
-                        answer_text: answerText
-                    })
-                    })
-                    .then(res => res.json()) // ambil body JSON
-                    .then(json => {
-                        if (json.success) {
-                            alert("✅ Jawaban berhasil dikirim!");
-
-                            // ✅ Simpan posisi aktif agar bisa dikembalikan setelah reload
-                            const activeModuleId = document.querySelector(".item-option.active")?.dataset.moduleId;
-                            const activeItemId   = document.querySelector(".item-option.active")?.dataset.itemId;
-                            localStorage.setItem("restoreModule", activeModuleId);
-                            localStorage.setItem("restoreItem", activeItemId);
-
-                            // 🧹 Bersihkan textarea & cache
-                            document.getElementById("answer_text").value = "";
-                            if ("caches" in window) caches.keys().then(names => names.forEach(name => caches.delete(name)));
-
-                            // ⏳ Delay sedikit agar alert muncul dulu
-                            setTimeout(() => window.location.reload(true), 1000);
-                        } else {
-                            alert("❌ Gagal menyimpan jawaban!");
-                        }
-                    })
-                    .catch(err => console.error("❌ Error submit:", err));
-            }
-    });
     // =====================================
     // Handler Simpan Komentar Utama (parentId = null)
     // =====================================
