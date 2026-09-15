@@ -11,19 +11,18 @@
     <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
     <!-- Custom CSS -->
-    <!-- <link href="{{ asset('assets/css/style.css') }}" rel="stylesheet"> -->
+    <link href="{{ asset('assets/css/style.css') }}" rel="stylesheet">
 </head>
-<body style="background-color: #eef0f3ff;">
+<body class="app-layout">
     {{-- Navbar --}}
-    <nav class="navbar navbar-expand-lg navbar-light bg-warning fixed-top py-3 ">
+    <nav class="navbar navbar-expand-lg navbar-light bg-warning fixed-top app-navbar" id="appNavbar">
         <div class="container-fluid">
             <div class="d-flex align-items-center justify-content-between w-100">
                 {{-- Logo --}}
                 <a class="navbar-brand fw-bold text-dark" href="/dashboard">
                     <img src="{{ asset('assets/img/skbf_logo.png') }}"
                         alt="Company Logo"
-                        style="width: 250px; height: auto;"
-                        class="rounded shadow me-2">
+                        class="navbar-logo rounded shadow me-2">
                 </a>
 
                 {{-- Toggle button (Mobile) --}}
@@ -46,6 +45,17 @@
             @endphp
 
             <div class="collapse navbar-collapse" id="navbarNav">
+                <div class="mobile-menu-header d-lg-none">
+                    <a class="navbar-brand fw-bold text-dark" href="/dashboard">
+                        <img src="{{ asset('assets/img/skbf_logo.png') }}"
+                            alt="Company Logo"
+                            class="navbar-logo rounded shadow">
+                    </a>
+                    <button class="btn-close" type="button"
+                            data-bs-toggle="collapse" data-bs-target="#navbarNav"
+                            aria-controls="navbarNav" aria-label="Close navigation"></button>
+                </div>
+
                 <ul class="navbar-nav ms-auto  align-items-lg-center align-items-left">
 
                     {{-- Learner --}}
@@ -123,15 +133,14 @@
                     @endif
 
                     {{-- User Dropdown --}}
-                    <li class="nav-item dropdown bg-white p-1 rounded">
+                    <li class="nav-item dropdown bg-white p-1 rounded user-nav-item">
                         <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="userDropdown" 
                         role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            <span class="fw-semibold text-dark me-2 text-truncate" 
-                                style="max-width: 120px; font-size: 0.9rem;">
+                            <span class="fw-semibold text-dark me-2 text-truncate user-name">
                                 {{ Auth::user()->full_name }}
                             </span>
                             <img src="{{ $user->photo_profile ? asset($user->photo_profile) : asset('assets/img/default-profile.png') }}" 
-                                alt="Profile" class="rounded-circle border border-2 shadow-sm" width="40" height="40"
+                                alt="Profile" class="rounded-circle border border-2 shadow-sm profile-photo"
                                 onerror="this.src='{{ asset('assets/img/default-profile.png') }}'">
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
@@ -181,8 +190,73 @@
         </div>
     </nav>
 
+    <script>
+        (() => {
+            const navbar = document.getElementById('appNavbar');
+            const mobileMenu = document.getElementById('navbarNav');
+
+            if (!navbar) return;
+
+            const updateNavbarHeight = () => {
+                document.documentElement.style.setProperty(
+                    '--app-navbar-height',
+                    `${navbar.offsetHeight}px`
+                );
+            };
+
+            updateNavbarHeight();
+            window.addEventListener('resize', updateNavbarHeight);
+
+            if ('ResizeObserver' in window) {
+                new ResizeObserver(updateNavbarHeight).observe(navbar);
+            }
+
+            if (mobileMenu) {
+                mobileMenu.addEventListener('show.bs.collapse', () => {
+                    if (window.innerWidth < 992) {
+                        document.body.classList.add('mobile-menu-open');
+                        mobileMenu.classList.remove('drawer-visible');
+
+                        requestAnimationFrame(() => {
+                            requestAnimationFrame(() => {
+                                mobileMenu.classList.add('drawer-visible');
+                            });
+                        });
+                    }
+                });
+
+                mobileMenu.addEventListener('shown.bs.collapse', () => {
+                    if (window.innerWidth < 992) {
+                        mobileMenu.classList.add('drawer-visible');
+                    }
+                });
+
+                mobileMenu.addEventListener('hide.bs.collapse', () => {
+                    if (window.innerWidth < 992) {
+                        mobileMenu.classList.remove('drawer-visible');
+                    }
+                });
+
+                mobileMenu.addEventListener('hidden.bs.collapse', () => {
+                    document.body.classList.remove('mobile-menu-open');
+                    mobileMenu.classList.remove('drawer-visible');
+                });
+
+                window.addEventListener('resize', () => {
+                    if (window.innerWidth >= 992) {
+                        document.body.classList.remove('mobile-menu-open');
+                        mobileMenu.classList.remove('drawer-visible');
+                    } else if (mobileMenu.classList.contains('show')) {
+                        document.body.classList.add('mobile-menu-open');
+                        mobileMenu.classList.add('drawer-visible');
+                    }
+                });
+            }
+        })();
+    </script>
+
     {{-- Main Content --}}
-    <div class="container pt-5 mb-5 pb-4" style="margin-top: 5rem;">
+    <div class="container mb-5 pb-4 app-main-content">
         <!-- Notifikasi -->
         @if(session('success'))
         <div id="alert-success" class="alert alert-success alert-dismissible fade show" role="alert">
@@ -249,7 +323,7 @@
                         <a href="{{ $notif->redirect_url ?? '#' }}"
                         class="text-decoration-none text-dark w-100"
                         style="display:block; transition:0.2s;border-radius:5px; margin-right:5px"
-                        onmouseover="this.style.backgroundColor='#bcb5abff'; this.style.cursor='pointer';"
+                        onmouseover="this.style.backgroundColor='var(--theme-secondary)'; this.style.cursor='pointer';"
                         onmouseout="this.style.backgroundColor='';">     
                           <li class="list-group-item d-flex justify-content-between align-items-start">
                                 <div>
@@ -283,7 +357,7 @@
     {{-- Footer --}}
     <div class="text-center py-3 border-top bg-light shadow-sm fixed-bottom">
         <small class="text-muted">
-            © {{ date('Y') }} Muhammad Iqbal Fattah (Portofolio) (v1.4.2)
+            © {{ date('Y') }} Muhammad Iqbal Fattah (Portofolio) (v1.4.4)
         </small>
     </div>
 

@@ -174,8 +174,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
     /* Tombol kursus lebih clean */
     .btn-outline-primary:hover {
-        background-color: #0d6efd;
-        color: #fff;
+        background-color: var(--theme-primary);
+        color: var(--theme-text);
     }
 </style>
 @endpush

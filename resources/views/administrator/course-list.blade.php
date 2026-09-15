@@ -223,8 +223,8 @@
     transform: scale(1.03);
 }
 .btn-outline-primary:hover {
-    background-color: #0d6efd;
-    color: #fff;
+    background-color: var(--theme-primary);
+    color: var(--theme-text);
     transform: scale(1.05);
 }
 </style>

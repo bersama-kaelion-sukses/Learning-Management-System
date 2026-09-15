@@ -128,7 +128,7 @@ export function InitUserMgt() {
             o.value = String(value);
             o.text  = label;
             o.disabled = true;
-            o.style.color = '#6c757d';
+            o.style.color = 'rgba(39, 51, 56, 0.68)';
             o.dataset.main = '1';
             return o;
         }

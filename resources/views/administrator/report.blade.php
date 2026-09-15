@@ -119,13 +119,13 @@
                     <!-- Toggle Nama Course -->
                     <!-- <p class="mb-1 fw-bold">
                         <a class="d-block text-decoration-none text-dark p-2 rounded"
-                        style="transition: all 0.2s; border: 1px solid #e9ecef;"
+                        style="transition: all 0.2s; border: 1px solid var(--theme-border);"
                         data-bs-toggle="collapse"
                         href="#course-{{ $course['course_id'] }}"
                         role="button"
                         aria-expanded="true"
                         aria-controls="course-{{ $course['course_id'] }}"
-                        onmouseover="this.style.backgroundColor='#f8f9fa'; this.style.boxShadow='0 2px 6px rgba(0,0,0,0.1)';"
+                        onmouseover="this.style.backgroundColor='var(--theme-background)'; this.style.boxShadow='0 2px 6px rgba(0,0,0,0.1)';"
                         onmouseout="this.style.backgroundColor='transparent'; this.style.boxShadow='none';">
                             📘 {{ $course['course_name'] }}
                         </a>

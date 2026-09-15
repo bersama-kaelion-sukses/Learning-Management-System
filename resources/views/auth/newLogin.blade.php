@@ -6,17 +6,19 @@
     <title>Change Password</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('assets/img/skbf_logo.png') }}">
+    <link href="{{ asset('assets/css/style.css') }}" rel="stylesheet">
 
     <style>
         body {
-            background: #f0f2f5;
+            background: var(--theme-background);
+            color: var(--theme-text);
             display: flex;
             align-items: center;
             justify-content: center;
             height: 100vh;
         }
         .login-card {
-            background: white;
+            background: #fff;
             border-radius: 15px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.1);
             padding: 40px;

@@ -460,8 +460,8 @@
 
     /* Header lebih tegas */
     thead th {
-        background: #ffc107 !important;
-        color: #212529;
+        background: var(--theme-primary) !important;
+        color: var(--theme-text);
         z-index: 4;
     }
 
