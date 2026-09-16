@@ -270,7 +270,7 @@
 </div>
 <!-- Modal Unggahan Learner -->
 <div class="modal fade" id="submissionModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title fw-bold">Learner Submission</h5>
@@ -299,7 +299,7 @@
 </div>
 <!-- Modal Lacak Learner -->
 <div class="modal fade" id="trackModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title fw-bold">Lacak Learner</h5>
@@ -327,7 +327,7 @@
 </div>
 <!-- Modal Konfirmasi Hapus -->
 <div class="modal" id="deleteCourseModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
+  <div class="modal-dialog">
     <div class="modal-content">
       <div class="modal-body text-center">
         <p class="fw-bold mb-3">Apakah Anda ingin menghapus Kursus ini?</p>
@@ -350,7 +350,7 @@
 <!-- Modal Create Course -->
 <div class="modal fade" id="createCourseModal" tabindex="-1" aria-hidden="true"
      data-bs-backdrop="static" data-bs-keyboard="false">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-dialog modal-lg">
         <div class="modal-content">
 
             <!-- Header Modal -->
@@ -449,7 +449,7 @@
 </div>
 <!-- Modal Edit Course  -->
 <div class="modal fade" id="editCourseModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
-  <div class="modal-dialog modal-dialog-centered modal-lg">
+  <div class="modal-dialog modal-lg">
     <div class="modal-content">
 
       <div class="modal-header">
@@ -533,7 +533,7 @@
 </div>
 <!-- Modal Takeover Course -->
 <div class="modal fade" id="takeoverCourseModal" tabindex="-1" aria-labelledby="takeoverCourseLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
-  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
     <div class="modal-content" style="max-height: 90vh; overflow-y: auto;">
       <div class="modal-header">
         <h5 class="modal-title fw-bold" id="takeoverCourseLabel">Takeover Kursus</h5>
@@ -615,7 +615,7 @@
 <!-- ✅ Modal Takedown Course -->
 <div class="modal fade" id="TakedownCourse" tabindex="-1" aria-labelledby="TakedownCourseLabel"
      aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
-    <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-dialog">
         <div class="modal-content border-0 shadow-sm">
 
             <!-- Header -->
@@ -659,7 +659,7 @@
 <!-- ✅ Modal Duplikat Course -->
 <div class="modal fade" id="duplicateCourse" tabindex="-1" aria-hidden="true"
      data-bs-backdrop="static" data-bs-keyboard="false">
-      <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-dialog">
     <div class="modal-content shadow-sm">
       
       <!-- Header -->

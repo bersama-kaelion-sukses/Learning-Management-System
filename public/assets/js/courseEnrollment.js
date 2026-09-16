@@ -957,47 +957,82 @@ export function InitCourseEnrollment() {
                 const container = ensureQuizContainer();
                 const requiredGrade = passingGrade ? parseFloat(passingGrade) : 0;
                 const passed = grade >= requiredGrade;
+                const resultStateClass = passed ? "is-passed" : "is-failed";
+                const statusIcon = passed ? "&#10003;" : "&#10005;";
+                const statusLabel = passed ? "Lulus" : "Belum Lulus";
+                const statusMessage = passed
+                    ? "Selamat, Anda telah memenuhi nilai minimum quiz."
+                    : "Nilai Anda belum mencapai batas minimum. Pelajari kembali materi sebelum mencoba lagi.";
 
-                let html = passed
-                    ? `<h5 class="text-success fw-bold">🎉 Anda sudah lulus!</h5>
-                    <p>Skor Anda <strong>${grade}%</strong> (Minimal ${requiredGrade}%)</p>`
-                    : `<h5 class="text-danger fw-bold">❌ Anda belum lulus</h5>
-                    <p>Skor Anda <strong>${grade}%</strong> (Minimal ${requiredGrade}%)</p>`;
+                container.className = `quiz-result ${resultStateClass}`;
+                container.setAttribute("aria-labelledby", "quiz-result-title");
 
-                html += `<hr><ul class="text-start small">
-                            <li>✅ Benar: ${correct}</li>
-                            <li>❌ Salah: ${wrong}</li>
-                            <li>📊 Skor Akhir: ${grade}%</li>
-                            <li>🧾 Percobaan ke-${attemptNo}</li>
-                        </ul>`;
+                let html = `
+                        <header class="quiz-result-header">
+                            <div class="quiz-result-copy">
+                                <p class="quiz-result-type mb-2">Hasil Quiz</p>
+                                <div class="quiz-result-status-row">
+                                    <span class="quiz-result-status-icon" aria-hidden="true">${statusIcon}</span>
+                                    <h3 class="quiz-result-title mb-0" id="quiz-result-title">${statusLabel}</h3>
+                                </div>
+                                <p class="quiz-result-message mb-0">${statusMessage}</p>
+                            </div>
+                            <div class="quiz-result-score" aria-label="Skor akhir ${grade} persen">
+                                <span class="quiz-result-score-label">Skor Akhir</span>
+                                <strong class="quiz-result-score-value">${grade}<small>%</small></strong>
+                                <span class="quiz-result-score-target">Minimum ${requiredGrade}%</span>
+                            </div>
+                        </header>
+
+                        <div class="quiz-result-body">
+                            <div class="quiz-result-summary" aria-label="Ringkasan hasil quiz">
+                                <div class="quiz-result-metric">
+                                    <span class="quiz-result-metric-label">Jawaban Benar</span>
+                                    <strong>${correct}<small> / ${total}</small></strong>
+                                </div>
+                                <div class="quiz-result-metric">
+                                    <span class="quiz-result-metric-label">Jawaban Salah</span>
+                                    <strong>${wrong}<small> / ${total}</small></strong>
+                                </div>
+                                <div class="quiz-result-metric">
+                                    <span class="quiz-result-metric-label">Percobaan</span>
+                                    <strong>Ke-${attemptNo}</strong>
+                                </div>
+                            </div>`;
 
                 if (attemptsHistory.length > 0) {
-                    html += `<hr><p class="fw-semibold mb-2">📊 Riwayat Nilai Sebelumnya:</p>
-                        <div class="table-responsive">
-                            <table class="table table-sm table-bordered align-middle text-center">
+                    html += `
+                        <div class="quiz-result-history">
+                            <div class="quiz-result-section-heading">
+                                <h4 class="mb-1">Riwayat Nilai</h4>
+                                <p class="mb-0">Ringkasan seluruh percobaan quiz Anda.</p>
+                            </div>
+                            <div class="table-responsive">
+                            <table class="table align-middle mb-0">
                                 <thead class="table-light">
                                     <tr>
-                                    <th>Percobaan</th>
-                                    <th>Skor</th>
-                                    <th>Remedial</th>
-                                    <th>Tanggal</th
-                                    ></tr>
+                                        <th scope="col">Percobaan</th>
+                                        <th scope="col">Skor</th>
+                                        <th scope="col">Status</th>
+                                        <th scope="col">Tanggal</th>
+                                    </tr>
                                 </thead><tbody>`;
                     attemptsHistory.forEach(a => {
-                        const badgeClass = a.grade >= requiredGrade ? "bg-success" : "bg-danger";
+                        const attemptPassed = a.grade >= requiredGrade;
+                        const badgeClass = attemptPassed ? "quiz-result-badge-pass" : "quiz-result-badge-fail";
                         const statusLabel = a.is_remedial == 1
-                               ? `<span class="badge bg-danger text-light">Jawaban Remedial</span>`
-                               : `<span class="badge bg-secondary">Jawaban Baru</span>`;
+                               ? `<span class="quiz-result-attempt-label">Remedial</span>`
+                               : `<span class="quiz-result-attempt-label">Jawaban Baru</span>`;
 
                         html += `
                             <tr>
-                                <td><span class="badge bg-primary">#${a.attempt_no}</span></td>
-                                <td><span class="badge ${badgeClass}">${a.grade}%</span></td>
+                                <td><strong>#${a.attempt_no}</strong></td>
+                                <td><span class="quiz-result-grade ${badgeClass}">${a.grade}%</span></td>
                                 <td>${statusLabel}</td>
                                 <td><small>${formatDate(a.submitted_at)}</small></td>
                             </tr>`;
                     });
-                    html += `</tbody></table></div>`;
+                    html += `</tbody></table></div></div>`;
                 }
 
                 // console.log("📌 [RESULT DETAIL] attemptsHistory:", attemptsHistory);
@@ -1008,26 +1043,26 @@ export function InitCourseEnrollment() {
                 if (normalAttempt < courseItemMaxAttempts) {
                     if (!previewMode) {
                         html += `
-                            <button class="btn btn-outline-secondary mt-3" id="retry-quiz-btn">
-                                🔁 Coba Lagi ${passed ? "(Optional)" : ""}
-                            </button>
+                            <footer class="quiz-result-footer">
+                                <p class="mb-0">${passed
+                                    ? "Anda masih dapat mengulang quiz untuk meningkatkan skor."
+                                    : "Siap mencoba kembali? Pastikan Anda sudah meninjau materinya."
+                                }</p>
+                                <button class="btn btn-outline-secondary" id="retry-quiz-btn">
+                                    Coba Lagi ${passed ? "(Opsional)" : ""}
+                                </button>
+                            </footer>
                         `;
                     } else {
                         html += `
-                            <div class="text-muted mt-3">
-                                🔒 Mode Preview — Quiz tidak dapat dimulai
-                            </div>
+                            <footer class="quiz-result-footer">
+                                <p class="text-muted mb-0">Mode Preview - quiz tidak dapat dimulai kembali.</p>
+                            </footer>
                         `;
                     }
                 }
 
-                // if (!passed) {
-                //     html += `<button class="btn btn-outline-secondary mt-3" id="retry-quiz-btn">🔁 Coba Lagi</button>`;
-                // } else {
-                //     html += `<button class="btn btn-outline-secondary mt-3" id="retry-quiz-btn">
-                //     🔁 Coba Lagi ${passed ? "(Optional)" : ""}
-                //     </button>`;
-                // }
+                html += `</div>`;
 
                 container.innerHTML = html;
                 localStorage.removeItem(storageKeyEnd);
@@ -1145,6 +1180,8 @@ export function InitCourseEnrollment() {
                     </section>`;
 
                 const container = ensureQuizContainer();
+                container.className = "mt-3";
+                container.removeAttribute("aria-labelledby");
                 container.innerHTML = html;
 
                 document.getElementById("prev-question-btn").addEventListener("click", e => {

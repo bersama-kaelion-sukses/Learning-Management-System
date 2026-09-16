@@ -15,7 +15,7 @@
         <div class="card-body py-4">
             <div class="row text-center g-4">
                 <div class="col-6 col-md-3">
-                    <div class="p-3 rounded bg-primary bg-opacity-10">
+                    <div class="p-3 rounded bg-success bg-opacity-10">
                         <h4 class="fw-bold mb-1 text-primary">{{ $totalUsers }}/{{ $activeUsers }}</h4>
                         <small class="text-muted fw-semibold">User Terdaftar / Aktif</small>
                     </div>
@@ -27,13 +27,13 @@
                     </div>
                 </div>
                 <div class="col-6 col-md-3">
-                    <div class="p-3 rounded bg-info bg-opacity-10">
+                    <div class="p-3 rounded bg-success bg-opacity-10">
                         <h4 class="fw-bold mb-1 text-info">{{ $completeCourses }}%</h4>
                         <small class="text-muted fw-semibold">Rata-rata Completion</small>
                     </div>
                 </div>
                 <div class="col-6 col-md-3">
-                    <div class="p-3 rounded bg-warning bg-opacity-10">
+                    <div class="p-3 rounded bg-success bg-opacity-10">
                         <h4 class="fw-bold mb-1 text-warning">{{ $dailyLogins }} / {{ $weeklyLogins }}</h4>
                         <small class="text-muted fw-semibold">Login Harian / Mingguan</small>
                     </div>

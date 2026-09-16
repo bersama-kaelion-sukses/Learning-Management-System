@@ -1,7 +1,165 @@
 export function InitUserMgt() {
+    initUserDirectory();
+    initUserForms();
     initEditUserModal();
     initPrivilegesModal();
     initUserOperationModal();
+
+    function initUserDirectory() {
+        const table = document.getElementById('userTable');
+        const searchInput = document.getElementById('searchUser');
+        const clearSearchBtn = document.getElementById('clearUserSearch');
+        const statusFilter = document.getElementById('userStatusFilter');
+        const pageSizeSelect = document.getElementById('userPageSize');
+        const paginationInfo = document.getElementById('paginationInfo');
+        const paginationControls = document.getElementById('paginationControls');
+        const resultsCount = document.getElementById('userResultsCount');
+        const emptyRow = document.getElementById('userEmptyStateRow');
+        const totalMetric = document.getElementById('userTotalMetric');
+        const activeMetric = document.getElementById('userActiveMetric');
+        const inactiveMetric = document.getElementById('userInactiveMetric');
+
+        if (!table || !searchInput || !statusFilter || !pageSizeSelect || !paginationInfo || !paginationControls) return;
+
+        let rows = [];
+        let filteredRows = [];
+        let currentPage = 1;
+
+        const getPageSize = () => parseInt(pageSizeSelect.value, 10) || 10;
+        const normalize = value => String(value || '').toLocaleLowerCase('id-ID').trim();
+
+        function refreshRows() {
+            rows = Array.from(table.querySelectorAll('tbody tr[data-user-row]'));
+            rows.forEach(row => {
+                row.dataset.searchText = normalize(row.textContent);
+            });
+
+            const activeCount = rows.filter(row => row.dataset.status === 'active').length;
+            if (totalMetric) totalMetric.textContent = String(rows.length);
+            if (activeMetric) activeMetric.textContent = String(activeCount);
+            if (inactiveMetric) inactiveMetric.textContent = String(rows.length - activeCount);
+        }
+
+        function createPageButton(label, page, { active = false, disabled = false } = {}) {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = `btn btn-sm ${active ? 'btn-secondary' : 'btn-outline-secondary'}`;
+            button.textContent = label;
+            button.disabled = disabled;
+            if (active) button.setAttribute('aria-current', 'page');
+            if (!disabled && page) button.addEventListener('click', () => {
+                currentPage = page;
+                render();
+                table.closest('.user-table-shell')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            });
+            return button;
+        }
+
+        function visiblePageRange(current, total) {
+            const maximum = window.innerWidth < 576 ? 3 : 5;
+            let start = Math.max(1, current - Math.floor(maximum / 2));
+            let end = Math.min(total, start + maximum - 1);
+            start = Math.max(1, end - maximum + 1);
+            return Array.from({ length: Math.max(0, end - start + 1) }, (_, index) => start + index);
+        }
+
+        function renderPagination(totalPages) {
+            paginationControls.innerHTML = '';
+            if (totalPages <= 1) return;
+
+            paginationControls.appendChild(createPageButton('Sebelumnya', currentPage - 1, { disabled: currentPage === 1 }));
+            visiblePageRange(currentPage, totalPages).forEach(page => {
+                paginationControls.appendChild(createPageButton(String(page), page, { active: page === currentPage }));
+            });
+            paginationControls.appendChild(createPageButton('Selanjutnya', currentPage + 1, { disabled: currentPage === totalPages }));
+        }
+
+        function render() {
+            const keyword = normalize(searchInput.value);
+            const selectedStatus = statusFilter.value;
+            const pageSize = getPageSize();
+
+            filteredRows = rows.filter(row => {
+                const matchesKeyword = !keyword || row.dataset.searchText.includes(keyword);
+                const matchesStatus = selectedStatus === 'all' || row.dataset.status === selectedStatus;
+                return matchesKeyword && matchesStatus;
+            });
+
+            const totalPages = Math.max(1, Math.ceil(filteredRows.length / pageSize));
+            currentPage = Math.min(currentPage, totalPages);
+            const startIndex = (currentPage - 1) * pageSize;
+            const visibleRows = filteredRows.slice(startIndex, startIndex + pageSize);
+
+            rows.forEach(row => { row.hidden = true; });
+            visibleRows.forEach((row, index) => {
+                row.hidden = false;
+                const numberCell = row.querySelector('.user-row-number');
+                if (numberCell) numberCell.textContent = String(startIndex + index + 1);
+            });
+
+            const hasResults = filteredRows.length > 0;
+            if (emptyRow) {
+                emptyRow.classList.toggle('d-none', hasResults);
+                const title = emptyRow.querySelector('strong');
+                const description = emptyRow.querySelector('span');
+                if (!hasResults && rows.length > 0) {
+                    if (title) title.textContent = 'Tidak ada pengguna yang sesuai';
+                    if (description) description.textContent = 'Ubah kata kunci atau filter status untuk melihat hasil lain.';
+                }
+            }
+
+            if (hasResults) {
+                const endIndex = Math.min(startIndex + pageSize, filteredRows.length);
+                paginationInfo.textContent = `Menampilkan ${startIndex + 1}-${endIndex} dari ${filteredRows.length} pengguna`;
+            } else {
+                paginationInfo.textContent = rows.length ? 'Tidak ada hasil ditemukan' : 'Belum ada pengguna';
+            }
+
+            if (resultsCount) resultsCount.textContent = `${filteredRows.length} pengguna`;
+            clearSearchBtn?.classList.toggle('d-none', !searchInput.value);
+            renderPagination(totalPages);
+        }
+
+        searchInput.addEventListener('input', () => {
+            currentPage = 1;
+            render();
+        });
+        clearSearchBtn?.addEventListener('click', () => {
+            searchInput.value = '';
+            currentPage = 1;
+            searchInput.focus();
+            render();
+        });
+        statusFilter.addEventListener('change', () => {
+            currentPage = 1;
+            render();
+        });
+        pageSizeSelect.addEventListener('change', () => {
+            currentPage = 1;
+            render();
+        });
+        window.addEventListener('resize', () => renderPagination(Math.max(1, Math.ceil(filteredRows.length / getPageSize()))));
+        document.addEventListener('userDirectoryChanged', () => {
+            refreshRows();
+            render();
+        });
+
+        refreshRows();
+        render();
+    }
+
+    function initUserForms() {
+        document.querySelectorAll('.user-management-modal form.needs-validation').forEach(form => {
+            form.addEventListener('submit', event => {
+                if (!form.checkValidity()) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    form.querySelector(':invalid')?.focus();
+                }
+                form.classList.add('was-validated');
+            });
+        });
+    }
     
     function initEditUserModal() {
         const modalEl = document.getElementById('EditUserModal');
@@ -9,11 +167,12 @@ export function InitUserMgt() {
         if (!modalEl || !form) return;
 
         // hidden untuk submit emp_id (karena input disabled)
-        let empHidden = form.querySelector('input[name="emp_id_hidden"]');
+        let empHidden = form.querySelector('#emp_id_hidden');
         if (!empHidden) {
             empHidden = document.createElement('input');
             empHidden.type = 'hidden';
-            empHidden.name = 'emp_id_hidden';
+            empHidden.name = 'emp_id';
+            empHidden.id = 'emp_id_hidden';
             form.appendChild(empHidden);
         }
 
@@ -60,15 +219,13 @@ export function InitUserMgt() {
 
             if (photoInput) {
                 photoInput.value = '';
-                const onChange = (e) => {
+                photoInput.onchange = (e) => {
                     const file = e.target.files && e.target.files[0];
                     if (!file) return;
                     const reader = new FileReader();
                     reader.onload = (ev) => { if (photoPreview) photoPreview.src = ev.target.result; };
                     reader.readAsDataURL(file);
-                    photoInput.removeEventListener('change', onChange);
                 };
-                photoInput.addEventListener('change', onChange);
             }
         });
 
@@ -336,8 +493,8 @@ export function InitUserMgt() {
             const attr = btn.getAttribute('data-active');
             if (attr !== null) return parseInt(attr, 10) === 1;
             const tr = btn.closest('tr');
-            const badge = tr?.querySelector('td:nth-child(7) .badge');
-            return badge?.classList.contains('bg-success') ?? false;
+            const badge = tr?.querySelector('td:nth-child(7) .user-status-badge');
+            return badge?.classList.contains('is-active') ?? false;
         }
 
         // Update tampilan baris setelah aksi
@@ -346,21 +503,24 @@ export function InitUserMgt() {
             if (!tr) return;
 
             if (deleted) {
-            tr.remove();
-            return;
+                tr.remove();
+                document.dispatchEvent(new CustomEvent('userDirectoryChanged'));
+                return;
             }
 
             // Update badge aktivasi (kolom ke-7)
             const tdStatus = tr.querySelector('td:nth-child(7)');
             if (tdStatus) {
-            const span = tdStatus.querySelector('span') || document.createElement('span');
-            span.className = `badge ${active ? 'bg-success' : 'bg-danger'}`;
-            span.textContent = active ? 'Aktif' : 'Tidak Aktif';
-            if (!span.parentNode) tdStatus.appendChild(span);
+                const badge = tdStatus.querySelector('.user-status-badge') || document.createElement('span');
+                badge.className = `user-status-badge ${active ? 'is-active' : 'is-inactive'}`;
+                badge.innerHTML = `<span aria-hidden="true"></span>${active ? 'Aktif' : 'Tidak Aktif'}`;
+                if (!badge.parentNode) tdStatus.appendChild(badge);
             }
 
             // Update data-active pada tombol aksi yg sama
             btn.setAttribute('data-active', active ? '1' : '0');
+            tr.dataset.status = active ? 'active' : 'inactive';
+            document.dispatchEvent(new CustomEvent('userDirectoryChanged'));
         }
 
         // Kirim request helper (PUT spoof) + tolerant JSON/HTML

@@ -303,7 +303,7 @@
 
     <!-- ✅ Modal Form Feedback -->
     <div class="modal fade" id="feedbackModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
-        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
             <div class="modal-content shadow-lg">
 
             <!-- Header -->
@@ -551,7 +551,7 @@
     </div>
     <!-- Modal Rules and Completed Course  -->
     <div class="modal modal-lg fade" id="courseRulesModal" data-bs-backdrop="static" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-dialog">
             <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title fw-semibold">

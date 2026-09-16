@@ -339,7 +339,7 @@
     <!-- Modal  -->
     {{-- 1️⃣ Modal - List All Participant --}}
     <div class="modal fade" id="modalParticipantList" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
             <div class="modal-content border-0 shadow-lg">
             <div class="modal-header bg-primary text-white">
                 <h5 class="modal-title fw-semibold">👥 Inquiry - List All Participant inside the Course</h5>
@@ -392,7 +392,7 @@
     </div>
     {{-- 3️⃣ Modal - Pre/Post Test Report --}}
     <div class="modal fade" id="modalTestReport" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
             <div class="modal-content border-0 shadow-lg">
             <div class="modal-header bg-info text-white">
                 <h5 class="modal-title fw-semibold">🧮 Inquiry - Pre-Test / Post-Test Report</h5>
@@ -435,7 +435,7 @@
     </div>
     {{-- 5️⃣ Modal - Learner Progress --}}
     <div class="modal fade" id="modalLearnerProgress" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
             <div class="modal-content border-0 shadow-lg">
             <div class="modal-header bg-secondary text-white">
                 <h5 class="modal-title fw-semibold">⏱️ Inquiry - Learner Progress & Completion</h5>
@@ -477,7 +477,7 @@
     </div>
      {{-- 5️⃣ Modal -Feedback Instructor --}}
     <div class="modal fade" id="modalFeedbackInstructor" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
             <div class="modal-content border-0 shadow-lg">
 
                 <div class="modal-header bg-secondary text-white">
