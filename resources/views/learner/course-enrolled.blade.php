@@ -3,27 +3,25 @@
 @section('title', 'Detail Course')
 
 @section('content')
-<div class="container-fluid mt-4">
+<div class="course-enrolled-shell">
         <!-- Row 1: Header Course -->
-    <div class="card shadow-sm mb-4">
+    <div class="card shadow-sm mb-4 course-overview-card">
         <div class="card-body">
             <div class="row align-items-center g-3">
                 <!-- Gambar Course -->
-                <div class="col-md-3 text-center">
+                <div class="col-md-12 text-center">
                     @if($course->course_image)
                         <img src="{{ asset('assets/img/course/'.$course->course_image) }}" 
-                            class="img-fluid rounded shadow-sm w-100" 
-                            alt="Image of {{ $course->course_title }}" 
-                            style="max-height:150px; object-fit:contain;">
+                            class="course-overview-image img-fluid rounded shadow-sm w-100"
+                            alt="Image of {{ $course->course_title }}">
                     @else
-                        <div class="bg-light border d-flex align-items-center justify-content-center rounded w-100" 
-                            style="height:120px;">
+                        <div class="course-overview-image bg-light border d-flex align-items-center justify-content-center rounded w-100">
                             <span class="text-muted">No Image</span>
                         </div>
                     @endif
                     <button 
                         type="button" 
-                        class="btn btn-outline-secondary w-100 mb-3 fw-semibold shadow-sm mt-4"
+                        class="btn btn-outline-secondary w-100 mb-3 fw-semibold shadow-sm mt-3"
                         onclick="
                             if (document.referrer && document.referrer !== window.location.href) {
                                 window.history.back();
@@ -36,7 +34,7 @@
                 </div>
 
                 <!-- Detail Course -->
-                <div class="col-md-9">
+                <div class="col-md-12">
                     <!-- INFO COURSE -->
                     <div class="mb-3">
                         <h5 class="fw-bold mb-1">{{ $course->course_title }}</h5>
@@ -50,10 +48,17 @@
                     </div>
 
                     <!-- REMARKS (TETAP ADA) -->
-                    <div class="form-text mb-4" id="remarkAttention">
+                    <div class="form-text mb-4 d-none" id="remarkAttention">
                         <strong id="remarkTitle" class="d-block mb-1 d-none">⚠️ Mohon Perhatikan:</strong>
                         <ul class="mb-0 ps-3" id="remarkList"></ul>
                     </div>
+                    <button type="button"
+                        id="remarkModalButton"
+                        class="btn btn-warning btn-sm w-100 fw-semibold mb-3"
+                        data-bs-toggle="modal"
+                        data-bs-target="#courseRemarkModal">
+                        Lihat Catatan Course
+                    </button>
                     
                     <div id="courseCompletedMessage"
                         class="text-center py-4 border-top {{ $progressCourse >= 100 ? '' : 'd-none' }}">
@@ -66,10 +71,10 @@
             </div>
         </div>
     </div>
-    <div class="row">
+    <div class="row course-learning-row">
         <!-- Sidebar kiri -->
-        <div class="col-md-3">
-            <div class="border bg-white p-3 h-100">
+        <div class="col-md-3 course-content-column">
+            <div class="border bg-white p-3 h-100 course-content-card">
                 <h5 class="mb-3 text-center">Pratinjau Kursus</h5>
                     <div class="accordion" id="materiAccordion">
                         @foreach($courseModules as $module)
@@ -138,6 +143,22 @@
                                                     // ================================
                                                     $mySubmission = $item->attachment?->where('user_id', Auth::id())?->first();
                                                     $myEssaySubmission = $item->essay?->submissions?->where('user_id', Auth::id())?->first();
+                                                    $itemTypeLabels = [
+                                                        1 => 'Video',
+                                                        2 => 'PDF',
+                                                        3 => 'Essay',
+                                                        4 => 'Quiz',
+                                                        5 => 'Forum',
+                                                        6 => 'Certificate',
+                                                        7 => 'Upload Learner',
+                                                    ];
+                                                    $itemMeta = [$itemTypeLabels[$item->course_item_type] ?? 'Course Item'];
+                                                    if (!empty($item->course_duration) && (int) $item->course_duration > 0) {
+                                                        $itemMeta[] = $item->course_duration . ' min';
+                                                    }
+                                                    if (!empty($item->course_due_end)) {
+                                                        $itemMeta[] = 'Due: ' . \Carbon\Carbon::parse($item->course_due_end)->format('d M Y H:i');
+                                                    }
                                                 @endphp
 
                                                 <li class="list-group-item list-group-item-action item-option"
@@ -182,7 +203,7 @@
                                                     data-file="{{ $item->course_media }}"
                                                     data-type="{{ $item->course_item_type }}"
                                                     data-course-duration="{{ $item->course_duration ?? 0 }}"
-                                                    data-course-multiply-chance="{{ $item->course_multiply_chance ?? 1 }}"
+                                                    data-course-multiply-chance="{{ $item->course_multiply_chance ?? 3 }}"
                                                     data-passing-grade-item="{{ $item->passing_grade }}"
                                                     data-status="{{ $item->status_lock ?? 'unlocked' }}"
                                                     @if(!empty($questionsData))
@@ -190,7 +211,10 @@
                                                     @endif
                                                 >
                                                     <span class="me-2">{{ $icons[$item->course_item_type] ?? '📌' }}</span>
-                                                    {{ $item->course_item_name }}
+                                                    <span class="course-item-copy">
+                                                        <span class="course-item-title">{{ $item->course_item_name }}</span>
+                                                        <small class="course-item-meta">{{ implode(' - ', $itemMeta) }}</small>
+                                                    </span>
                                                 </li>
                                             @endforeach
                                         </ul>
@@ -200,7 +224,7 @@
                         @endforeach
                     </div>
 
-                    <div class="bottom-0 start-0 end-0 p-3">
+                    <div class="bottom-0 start-0 end-0 pt-3 course-discussion-action">
                         <div class="bg-secondary text-center rounded shadow-sm">
                             <button id="add-thread-forum" class="btn btn-warning btn-md w-100"  data-bs-toggle="modal" data-bs-target="#ThreadDiscussionLearner" data-course-id="{{ $course->course_id }}">Buka Thread Diskusi</button>
                         </div>
@@ -209,10 +233,9 @@
         </div>
 
         <!-- Konten kanan -->
-        <div class="col-md-9 d-flex flex-column">
+        <div class="col-md-9 d-flex flex-column course-topic-column">
             <div id="learner-detail-panel" 
-                class="flex-fill border bg-white shadow-sm rounded p-4 mb-3"
-                style="min-height:50vh; max-height:75vh; overflow:auto;">
+                class="flex-fill border bg-white shadow-sm rounded p-4 mb-3 course-topic-panel">
                 <h5 class="mb-3 text-muted fst-italic">👉 Pilih materi di kiri untuk melihat detail</h5>
             </div>
             <div class="d-flex justify-content-between align-items-center">
@@ -232,6 +255,25 @@
             </div>
         </div>
     </div>
+</div>
+
+    <div class="modal fade" id="courseRemarkModal" tabindex="-1" aria-labelledby="remarkModalTitle" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content shadow">
+                <div class="modal-header bg-warning">
+                    <h5 class="modal-title fw-semibold" id="remarkModalTitle">Catatan Course</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+                </div>
+                <div class="modal-body">
+                    <ul class="mb-0 ps-3" id="remarkModalList"></ul>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Modal Fullscreen Thread -->
     <div class="modal fade" id="ThreadDiscussionLearner" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
         <div class="modal-dialog modal-lg">
@@ -261,7 +303,7 @@
 
     <!-- ✅ Modal Form Feedback -->
     <div class="modal fade" id="feedbackModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
-        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
             <div class="modal-content shadow-lg">
 
             <!-- Header -->
@@ -509,7 +551,7 @@
     </div>
     <!-- Modal Rules and Completed Course  -->
     <div class="modal modal-lg fade" id="courseRulesModal" data-bs-backdrop="static" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-dialog">
             <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title fw-semibold">
@@ -604,5 +646,4 @@
     <div id="course-wrapper"
         data-preview-mode="{{ $previewMode ? '1' : '0' }}">
     </div>
-</div>
 @endsection

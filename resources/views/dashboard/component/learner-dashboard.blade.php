@@ -17,19 +17,19 @@
 
   .calendar .header {
     font-weight: 600;
-    background: #f8f9fa;
+    background: var(--theme-secondary);
   }
 
   /* range course */
   .calendar .range-primary {
-    background: #0d6efd;
-    color: #fff;
+    background: var(--theme-primary);
+    color: var(--theme-text);
   }
 
   /* TODAY harus selalu menang */
   .calendar .today {
-    background: #fda50d !important;
-    color: #fff;
+    background: var(--theme-primary) !important;
+    color: var(--theme-text);
     font-weight: bold;
   }
 
@@ -41,8 +41,8 @@
     bottom: 120%;
     left: 50%;
     transform: translateX(-50%);
-    background: #212529;
-    color: #fff;
+    background: var(--theme-text);
+    color: var(--theme-background);
     padding: 4px 8px;
     border-radius: 4px;
     font-size: 0.75rem;
@@ -76,7 +76,7 @@
   }
 
   .list-group-item-action:hover {
-    background-color: #f9fafb;
+    background-color: var(--theme-background);
   }
    .reveal-card {
       opacity: 0;

@@ -21,7 +21,7 @@
   // ==============
   const courseColors = {};
   const colorsPalette = [
-    "#0d6efd", "#198754", "#dc3545", "#fd7e14", "#6f42c1", "#0dcaf0", "#ffc107"
+    "#8B9A6E", "#A8B28B", "#EAE2D6", "#B7AA98", "#273338", "#6F7C5A", "#D8CDBE"
   ];
   let colorIndex = 0;
 
@@ -81,7 +81,7 @@
 
       let style = "";
       if (bgColor && !isToday) {
-        style = `style="background:${bgColor};color:#fff;"`;
+        style = `style="background:${bgColor};color:#273338;"`;
       }
 
       html += `

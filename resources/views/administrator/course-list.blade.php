@@ -110,7 +110,7 @@
     <!-- Modal Assign Learner -->
     <div class="modal fade" id="assignModal" tabindex="-1" aria-labelledby="assignModalLabel" aria-hidden="true"
         data-bs-backdrop="static" data-bs-keyboard="false">
-        <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-dialog modal-lg">
             <div class="modal-content">
 
                 <!-- Header Modal -->
@@ -223,8 +223,8 @@
     transform: scale(1.03);
 }
 .btn-outline-primary:hover {
-    background-color: #0d6efd;
-    color: #fff;
+    background-color: var(--theme-primary);
+    color: var(--theme-text);
     transform: scale(1.05);
 }
 </style>

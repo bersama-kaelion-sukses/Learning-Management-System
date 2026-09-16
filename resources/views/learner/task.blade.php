@@ -34,7 +34,7 @@
 
     <!-- Modal Pop Up List Tugas Hari Ini -->
     <div class="modal fade" id="calendarTaskModal" tabindex="-1" aria-labelledby="calendarTaskModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header bg-light">
                     <h5 class="modal-title fw-bold" id="calendarTaskModalLabel">
@@ -72,7 +72,7 @@
 
 <!-- Modal Pop Up Detail Tugas -->
 <div class="modal fade" id="taskModal" tabindex="-1" aria-labelledby="taskModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header bg-primary text-white">
                 <h5 class="modal-title fw-bold" id="taskModalLabel">Nama Kursus - Week n</h5>
@@ -174,8 +174,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
     /* Tombol kursus lebih clean */
     .btn-outline-primary:hover {
-        background-color: #0d6efd;
-        color: #fff;
+        background-color: var(--theme-primary);
+        color: var(--theme-text);
     }
 </style>
 @endpush

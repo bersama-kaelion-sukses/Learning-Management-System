@@ -287,7 +287,7 @@
 
 <!-- Modal Konfirmasi -->
 <div class="modal fade" id="finishTakeoverModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
+  <div class="modal-dialog">
     <div class="modal-content">
       <form method="POST" id="finishTakeoverForm">
         @csrf
@@ -309,7 +309,7 @@
 </div>
 <!-- Modal Edit Course  -->
 <div class="modal fade" id="editCourseModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
-  <div class="modal-dialog modal-dialog-centered modal-lg">
+  <div class="modal-dialog modal-lg">
     <div class="modal-content">
 
       <div class="modal-header">
@@ -393,7 +393,7 @@
 <!-- ✅ Modal Takedown Course -->
 <div class="modal fade" id="TakedownCourse" tabindex="-1" aria-labelledby="TakedownCourseLabel"
      aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
-    <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-dialog">
         <div class="modal-content border-0 shadow-sm">
 
             <!-- Header -->
@@ -437,7 +437,7 @@
 <!-- ✅ Modal Duplikat Course -->
 <div class="modal fade" id="takeover_duplicateCourse" tabindex="-1" aria-hidden="true"
      data-bs-backdrop="static" data-bs-keyboard="false">
-      <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-dialog">
     <div class="modal-content shadow-sm">
       
       <!-- Header -->

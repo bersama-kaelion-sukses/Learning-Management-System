@@ -609,7 +609,9 @@ class CourseEnrollmentController extends Controller
                     $hasFinal = match($item->course_item_type) {
                         '3' => CourseEssaySubmission::where('item_id', $item->item_id)
                                     ->where('user_id', $userId)
-                                    ->where('is_remedial', 0)
+                                    ->where(function ($query) {
+                                        $query->whereNull('grade')->orWhere('is_remedial', 0);
+                                    })
                                     ->exists(),
                         '4' => CourseMcSubmission::where('item_id', $item->item_id)
                                     ->where('user_id', $userId)
@@ -691,19 +693,43 @@ class CourseEnrollmentController extends Controller
     public function essaySubmission (Request $request, $itemId) 
     {
         $request->validate([
-            'essay_id' => 'required|integer',
+            'essay_id' => 'nullable|integer',
             'item_id' => 'required|integer',
             'answer_text' => 'nullable|string',
         ]);
 
-        $submission = CourseEssaySubmission::create([
-            'essay_id' => $request->essay_id,
-            'item_id' => $request->item_id,
-            'user_id' => Auth::id(), // ambil user yang login
-            'answer_text' => $request->answer_text,
-            'is_graded' => false,
-            'submitted_at' => now(),
-        ]);
+        $submission = DB::transaction(function () use ($request, $itemId) {
+            $item = CourseWeekItem::where('item_id', $itemId)->lockForUpdate()->firstOrFail();
+            abort_unless((string) $item->course_item_type === '3'
+                && (string) $request->item_id === (string) $itemId, 422);
+
+            $essay = $item->essay;
+            abort_if($request->filled('essay_id') && (!$essay
+                || (string) $essay->essay_id !== (string) $request->essay_id), 422);
+
+            $existing = CourseEssaySubmission::where('item_id', $itemId)
+                ->where('user_id', Auth::id())->first();
+            if ($existing) {
+                return $existing;
+            }
+
+            // Items configured through the item form may not have a separate essay row yet.
+            $essay ??= $item->essay()->create([
+                'essay_title' => $item->course_item_name,
+                'instruction' => $item->course_describe ?? '',
+                'is_essay_submitted' => false,
+            ]);
+
+            return CourseEssaySubmission::create([
+                'essay_id' => $essay->essay_id,
+                'item_id' => $itemId,
+                'user_id' => Auth::id(),
+                'answer_text' => $request->answer_text,
+                'is_graded' => false,
+                'is_remedial' => 0,
+                'submitted_at' => now(),
+            ]);
+        });
 
         return response()->json([
             'success' => true,
@@ -1634,9 +1660,7 @@ class CourseEnrollmentController extends Controller
             case '3':
                 $submission = CourseEssaySubmission::where('item_id', $itemId)
                     ->where('user_id', $userId)
-                    ->where('is_remedial', 0)
-                    ->whereNotNull('grade')
-                    ->orderByDesc('grade')
+                    ->orderBy('submitted_at')
                     ->first();
                 break;
     
@@ -1672,6 +1696,10 @@ class CourseEnrollmentController extends Controller
             $submittedAt = $submission->created_at ?? $submission->submitted_at ?? null;
             $isRemedial  = $submission->is_remedial ?? 0;
             $grade       = $submission->grade;
+            // A saved essay awaiting grading is submitted, not a remedial attempt.
+            if ($cleanType === '3' && is_null($grade)) {
+                $isRemedial = 0;
+            }
         }
     
         if (!is_null($passingGrade) && !is_null($grade)) {
