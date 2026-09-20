@@ -246,7 +246,7 @@
     </div>
   <!-- Modal Modify Course Item -->
     <div class="modal fade" id="modifyModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
-        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
+        <div class="modal-dialog modal-dialog-scrollable modal-lg">
             <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">Tambahkan Materi Pembahasan</h5>
@@ -416,7 +416,7 @@
     </div>
     <!-- Modal Assign Learner -->
     <div class="modal fade" id="assignModal" tabindex="-1" aria-labelledby="assignModalLabel" data-bs-backdrop="static" data-bs-keyboard="false">
-        <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-dialog modal-lg">
             <div class="modal-content">
 
                 <!-- Header Modal -->
@@ -506,7 +506,7 @@
     </div>
     <!-- Modal Esai -->
     <div class="modal fade" id="EssayItemModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
-        <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <form id="essayForm" method="POST" enctype="multipart/form-data" novalidate>
                     @csrf
@@ -592,7 +592,7 @@
     <!-- Modal Pilihan Ganda -->
     <div class="modal fade" id="MultiplyChoiceItemModal" tabindex="-1"
         data-bs-backdrop="static" data-bs-keyboard="false">
-        <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-dialog modal-lg">
             <div class="modal-content">
 
                 <!-- Header -->
@@ -625,7 +625,7 @@
     <!-- Modal Forum Diskusi -->
     <div class="modal fade" id="DiscussionForumModal" tabindex="-1"
         data-bs-backdrop="static" data-bs-keyboard="false">
-        <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-dialog modal-lg">
             <div class="modal-content">
 
                 <!-- Header -->
@@ -698,7 +698,7 @@
     </div>
     <!-- Modal Detail Learner -->
     <div class="modal fade" id="viewLearnersModal2" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title fw-bold">Daftar Learner Tergabung</h5>
@@ -746,7 +746,7 @@
     </div>
     <!-- Modal Thread Forum Diskusi -->
     <div class="modal fade" id="ThreadDiscussion" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-dialog modal-lg">
         <div class="modal-content">
 
         <!-- Header -->

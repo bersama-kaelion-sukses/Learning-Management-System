@@ -110,7 +110,7 @@
 {{-- 💬 MODAL: TETAPKAN HASIL (TRAINER) --}}
 {{-- ===================================================== --}}
 <div class="modal fade" id="modalSetResult" tabindex="-1" data-bs-backdrop="static">
-    <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-dialog">
         <div class="modal-content border-0 shadow">
             <div class="modal-header bg-light">
                 <h5 class="modal-title fw-bold">📝 Tetapkan Hasil Konsultasi</h5>

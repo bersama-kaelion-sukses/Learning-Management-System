@@ -110,7 +110,7 @@
     <!-- Modal Assign Learner -->
     <div class="modal fade" id="assignModal" tabindex="-1" aria-labelledby="assignModalLabel" aria-hidden="true"
         data-bs-backdrop="static" data-bs-keyboard="false">
-        <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-dialog modal-lg">
             <div class="modal-content">
 
                 <!-- Header Modal -->

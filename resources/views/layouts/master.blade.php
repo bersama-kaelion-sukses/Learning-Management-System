@@ -284,7 +284,7 @@
 
     <!-- Modal Password Expiry -->
     <div class="modal fade" id="passwordExpiryModal" tabindex="-1" aria-hidden="true"  data-backdrop="static">
-        <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-dialog">
             <div class="modal-content border-danger shadow">
             <div class="modal-header bg-danger text-white">
                 <h5 class="modal-title">⚠️ {{ json_lang('Password Will Expire Soon') }}</h5>
