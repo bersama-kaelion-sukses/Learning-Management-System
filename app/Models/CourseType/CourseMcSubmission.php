@@ -20,6 +20,7 @@ class CourseMcSubmission extends Model
         'user_id',
         'questions',   // JSON (array of question_id)
         'grade',
+        'answer_details',
         'feedback',
         'submitted_at',
         'is_remedial',
@@ -27,6 +28,7 @@ class CourseMcSubmission extends Model
     ];
 
     protected $casts = [
+        'answer_details' => 'array',
         'questions' => 'array',       // otomatis decode/encode JSON
         'submitted_at' => 'datetime',
     ];
