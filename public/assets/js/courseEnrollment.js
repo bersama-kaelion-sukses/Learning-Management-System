@@ -778,6 +778,7 @@ export function InitCourseEnrollment() {
                                         <th>Skor</th>
                                         <th>Status</th>
                                         <th>Tanggal</th>
+                                        <th>Lihat Jawaban</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -793,6 +794,7 @@ export function InitCourseEnrollment() {
                                                 <td><span class="badge ${scoreBadge}">${a.grade}%</span></td>
                                                 <td>${statusBadge}</td>
                                                 <td><small>${formatDate(a.submitted_at)}</small></td>
+                                                <td>${renderQuizReviewAction(a)}</td>
                                             </tr>
                                         `;
                                     }).join("")}
@@ -801,6 +803,115 @@ export function InitCourseEnrollment() {
                         </div>
                     </div>
                 `;
+            }
+
+            function renderQuizReviewAction(attempt) {
+                if (!attempt.has_answer_details || !attempt.mc_submission_id) {
+                    return '<small class="text-muted">Detail jawaban tidak tersedia untuk percobaan ini</small>';
+                }
+                return `<button type="button" class="btn btn-sm btn-outline-primary quiz-review-btn"
+                    data-submission-id="${escapeQuizText(attempt.mc_submission_id)}"
+                    aria-label="Lihat jawaban percobaan ${escapeQuizText(attempt.attempt_no)}">Lihat Jawaban</button>`;
+            }
+
+            function renderQuizSubmissionReview(submission) {
+                if (!submission.has_answer_details || !Array.isArray(submission.answer_details)
+                    || submission.answer_details.length === 0) {
+                    return '<p class="text-muted mb-0">Detail jawaban tidak tersedia untuk percobaan ini</p>';
+                }
+
+                const details = submission.answer_details;
+                const correct = details.filter(answer => answer.is_correct).length;
+                const unanswered = details.filter(answer => answer.selected_option_id == null).length;
+                const renderImage = (path, alt) => {
+                    const url = quizImageUrl(path);
+                    return url ? `<img src="${escapeQuizText(url)}" alt="${escapeQuizText(alt)}"
+                        class="img-fluid rounded border d-block my-2" style="max-height: 320px; object-fit: contain;">` : '';
+                };
+
+                return `<p class="fw-semibold">Percobaan #${escapeQuizText(submission.attempt_no)}
+                        &middot; Skor ${escapeQuizText(submission.grade)}%</p>
+                    <p class="text-muted">${escapeQuizText(formatDate(submission.submitted_at))}</p>
+                    <p>Benar: ${correct} &middot; Salah: ${details.length - correct - unanswered}
+                        &middot; Tidak dijawab: ${unanswered}</p>
+                    ${details.map((answer, index) => {
+                        const unanswered = answer.selected_option_id == null;
+                        const status = unanswered ? 'Tidak dijawab' : answer.is_correct ? 'Benar' : 'Salah';
+                        const statusClass = unanswered ? 'bg-secondary' : answer.is_correct ? 'bg-success' : 'bg-danger';
+                        const options = Array.isArray(answer.options) ? answer.options : [];
+                        return `<section class="border rounded p-3 mb-3" aria-label="Soal ${index + 1}">
+                            <div class="d-flex justify-content-between align-items-center gap-2 mb-2">
+                                <h6 class="mb-0">Soal ${index + 1}</h6>
+                                <span class="badge ${statusClass}">${status}</span>
+                            </div>
+                            ${renderImage(answer.question_image, `Gambar soal ${index + 1}`)}
+                            <p style="white-space: pre-wrap;">${escapeQuizText(answer.question_text)}</p>
+                            ${unanswered ? '<p class="text-muted">Anda tidak menjawab soal ini.</p>' : ''}
+                            <ul class="list-unstyled mb-0">${options.map(option => {
+                                const selected = !unanswered && String(option.option_id) === String(answer.selected_option_id);
+                                const isCorrect = answer.correct_option_id != null
+                                    && String(option.option_id) === String(answer.correct_option_id);
+                                const border = isCorrect ? 'border-success' : selected ? 'border-danger' : '';
+                                return `<li class="border ${border} rounded p-2 mb-2">
+                                    ${selected ? '<span class="badge bg-primary me-2">Jawaban Anda</span>' : ''}
+                                    ${isCorrect ? '<span class="badge bg-success">Jawaban benar</span>' : ''}
+                                    ${renderImage(option.option_image, 'Gambar pilihan jawaban')}
+                                    <div style="white-space: pre-wrap;">${escapeQuizText(option.option_text)}</div>
+                                </li>`;
+                            }).join('')}</ul>
+                        </section>`;
+                    }).join('')}`;
+            }
+
+            function bindQuizReviewButtons(container) {
+                container.querySelectorAll('.quiz-review-btn').forEach(button => {
+                    button.addEventListener('click', async () => {
+                        const modalEl = document.createElement('div');
+                        modalEl.className = 'modal fade';
+                        modalEl.tabIndex = -1;
+                        modalEl.setAttribute('aria-label', 'Review jawaban quiz');
+                        modalEl.innerHTML = `<div class="modal-dialog modal-lg modal-dialog-scrollable">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title">Review Jawaban Quiz</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+                                </div>
+                                <div class="modal-body text-start" aria-live="polite">
+                                    <p role="status">Memuat jawaban...</p>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
+                                </div>
+                            </div>
+                        </div>`;
+                        document.body.appendChild(modalEl);
+                        const modal = new bootstrap.Modal(modalEl);
+                        const controller = new AbortController();
+                        button.disabled = true;
+                        modalEl.addEventListener('hidden.bs.modal', () => {
+                            controller.abort();
+                            modal.dispose();
+                            modalEl.remove();
+                            button.disabled = false;
+                            if (button.isConnected) button.focus();
+                        }, { once: true });
+                        modal.show();
+
+                        const body = modalEl.querySelector('.modal-body');
+                        try {
+                            const response = await fetch(`/course/${encodeURIComponent(itemId)}/mc-submission/${encodeURIComponent(button.dataset.submissionId)}`, {
+                                headers: { Accept: 'application/json' },
+                                signal: controller.signal,
+                            });
+                            if (!response.ok) throw new Error('Review unavailable');
+                            const submission = await response.json();
+                            if (!controller.signal.aborted) body.innerHTML = renderQuizSubmissionReview(submission);
+                        } catch (error) {
+                            if (controller.signal.aborted) return;
+                            body.innerHTML = '<p class="text-danger mb-0" role="alert">Tidak dapat memuat jawaban. Tutup jendela ini dan coba lagi.</p>';
+                        }
+                    });
+                });
             }
 
             function ensureQuizContainer() {
@@ -889,7 +1000,20 @@ export function InitCourseEnrollment() {
                 const grade = totalQ > 0 ? Math.round((correctCount / totalQ) * 100) : 0;
 
                 const questionIds = Object.keys(answers).map(id => parseInt(id));
-                const payload = { item_id: itemId, questions: questionIds, grade: grade };
+                const answerDetails = questions.map(question => {
+                    const selectedOptionId = answers[question.question_id]?.selected;
+
+                    return {
+                        question_id: Number(question.question_id),
+                        selected_option_id: selectedOptionId == null ? null : Number(selectedOptionId)
+                    };
+                });
+                const payload = {
+                    item_id: itemId,
+                    questions: questionIds,
+                    answer_details: answerDetails,
+                    grade: grade
+                };
 
                 const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
                 return fetch(`/course/${itemId}/mc-submission`, {
@@ -900,7 +1024,13 @@ export function InitCourseEnrollment() {
                     },
                     body: JSON.stringify(payload)
                 })
-                .then(res => res.json())
+                .then(async res => {
+                    const data = await res.json();
+                    if (!res.ok || !data.success) {
+                        throw new Error(data.message || "Gagal menyimpan jawaban quiz.");
+                    }
+                    return data;
+                })
                 .then(data => {
                     // ====================
                     // /* ===============================
@@ -945,7 +1075,12 @@ export function InitCourseEnrollment() {
                     localStorage.removeItem(storageKeyActive);
                     if (timerInterval) clearInterval(timerInterval);
                     timerInterval = null;
-                    renderResultDetail(grade, correctCount, wrongCount, totalQ, data.attempt, data.history || []);
+                    const savedAnswers = Array.isArray(data.data.answer_details) ? data.data.answer_details : [];
+                    const savedCorrect = savedAnswers.filter(answer => answer.is_correct).length;
+                    const savedWrong = savedAnswers.filter(answer =>
+                        answer.selected_option_id !== null && !answer.is_correct).length;
+                    renderResultDetail(data.data.grade, savedCorrect, savedWrong, savedAnswers.length,
+                        data.attempt, data.history || []);
                 })
                 .catch(err => {
                     console.error("❌ Error auto-submit quiz:", err);
@@ -980,8 +1115,9 @@ export function InitCourseEnrollment() {
                                     <th>Percobaan</th>
                                     <th>Skor</th>
                                     <th>Remedial</th>
-                                    <th>Tanggal</th
-                                    ></tr>
+                                    <th>Tanggal</th>
+                                    <th>Lihat Jawaban</th>
+                                    </tr>
                                 </thead><tbody>`;
                     attemptsHistory.forEach(a => {
                         const badgeClass = a.grade >= requiredGrade ? "bg-success" : "bg-danger";
@@ -995,6 +1131,7 @@ export function InitCourseEnrollment() {
                                 <td><span class="badge ${badgeClass}">${a.grade}%</span></td>
                                 <td>${statusLabel}</td>
                                 <td><small>${formatDate(a.submitted_at)}</small></td>
+                                <td>${renderQuizReviewAction(a)}</td>
                             </tr>`;
                     });
                     html += `</tbody></table></div>`;
@@ -1031,6 +1168,7 @@ export function InitCourseEnrollment() {
 
                 container.innerHTML = html;
                 localStorage.removeItem(storageKeyEnd);
+                bindQuizReviewButtons(container);
                 localStorage.removeItem(storageKeyActive);
 
                 const retryBtn = document.getElementById("retry-quiz-btn");
@@ -1369,6 +1507,7 @@ export function InitCourseEnrollment() {
             });
 
             const previewStartBtn = document.getElementById("start-quiz-btn");
+            bindQuizReviewButtons(detailPanel);
             if (previewStartBtn && !attemptLimitReached) {
                 previewStartBtn.addEventListener("click", () => {
                     startQuiz(true, attempts);

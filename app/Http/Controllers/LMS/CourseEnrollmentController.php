@@ -803,9 +803,11 @@ class CourseEnrollmentController extends Controller
     // Active this code after everthing clear, and Mc Above will commented: 
     public function mcSubmission(Request $request, $itemId)
     {
-        $request->validate([
-            'questions' => 'nullable|array',
-            'grade'     => 'nullable|numeric',
+        $validated = $request->validate([
+            'answer_details' => 'present|array',
+            'answer_details.*' => 'array',
+            'answer_details.*.question_id' => 'required|integer|distinct',
+            'answer_details.*.selected_option_id' => 'present|nullable|integer',
         ]);
 
         $userId    = Auth::id();
@@ -820,7 +822,43 @@ class CourseEnrollmentController extends Controller
         //     'payload'    => $request->all(),
         // ]);
 
-        return DB::transaction(function () use ($request, $itemId, $userId, $requestId) {
+        return DB::transaction(function () use ($validated, $itemId, $userId, $requestId) {
+            $item = CourseWeekItem::where('item_id', $itemId)->lockForUpdate()->firstOrFail();
+            abort_unless((string) $item->course_item_type === '4', 422, 'Item must be a multiple-choice quiz.');
+            abort_unless(CourseEnrollment::where('course_id', $item->course_id)
+                ->where('user_id', $userId)->where('status_join', 1)->exists(), 403);
+
+            $questions = $item->questions->keyBy('question_id');
+            abort_if($questions->isEmpty(), 422, 'This quiz has no questions.');
+            $submittedAnswers = collect($validated['answer_details'])->keyBy('question_id');
+            foreach ($submittedAnswers as $questionId => $answer) {
+                abort_unless($questions->has($questionId), 422, 'Question does not belong to this quiz.');
+                $selectedId = $answer['selected_option_id'];
+                abort_if($selectedId !== null && !$questions[$questionId]->options
+                    ->contains('option_id', $selectedId), 422, 'Selected option does not belong to this question.');
+            }
+
+            // Save every question, including unanswered ones, with the original content.
+            $answerDetails = $questions->map(function ($question) use ($submittedAnswers) {
+                $selectedId = $submittedAnswers->get($question->question_id)['selected_option_id'] ?? null;
+                $selectedOption = $question->options->firstWhere('option_id', $selectedId);
+                $correctOption = $question->options->firstWhere('is_correct', 1);
+
+                return [
+                    'question_id' => (int) $question->question_id,
+                    'question_text' => $question->question_text,
+                    'question_image' => $question->question_image,
+                    'selected_option_id' => $selectedId === null ? null : (int) $selectedId,
+                    'correct_option_id' => $correctOption ? (int) $correctOption->option_id : null,
+                    'is_correct' => $selectedOption ? (bool) $selectedOption->is_correct : false,
+                    'options' => $question->options->map(fn ($option) => [
+                        'option_id' => (int) $option->option_id,
+                        'option_text' => $option->option_text,
+                        'option_image' => $option->option_image,
+                    ])->values()->all(),
+                ];
+            })->values();
+            $grade = (int) round($answerDetails->where('is_correct', true)->count() / $questions->count() * 100);
 
             // Log::info('🔒 [MC_SUBMIT][LOCK_ATTEMPT]', [
             //     'request_id' => $requestId,
@@ -853,7 +891,9 @@ class CourseEnrollmentController extends Controller
                 return response()->json([
                     'success' => true,
                     'message' => 'Duplicate submission ignored',
+                    'data' => $latest,
                     'attempt' => $latest->attempt_no,
+                    'history' => $this->mcSubmissionHistory($itemId, $userId),
                 ]);
             }
 
@@ -862,8 +902,9 @@ class CourseEnrollmentController extends Controller
             $submission = CourseMcSubmission::create([
                 'item_id'      => $itemId,
                 'user_id'      => $userId,
-                'questions'    => $request->questions,
-                'grade'        => $request->grade,
+                'questions'    => $answerDetails->whereNotNull('selected_option_id')->pluck('question_id')->all(),
+                'answer_details' => $answerDetails->all(),
+                'grade'        => $grade,
                 'submitted_at' => now(),
                 'attempt_no'   => $attemptNo,
             ]);
@@ -874,18 +915,7 @@ class CourseEnrollmentController extends Controller
             //     'submission_id' => $submission->id,
             // ]);
 
-            $history = CourseMcSubmission::where('item_id', $itemId)
-                ->where('user_id', $userId)
-                ->orderBy('attempt_no', 'asc')
-                ->get()
-                ->map(function ($s) {
-                    return [
-                        'attempt_no'   => $s->attempt_no,
-                        'grade'        => $s->grade,
-                        'is_remedial'  => $s->is_remedial,
-                        'submitted_at' => $s->submitted_at,
-                    ];
-                });
+            $history = $this->mcSubmissionHistory($itemId, $userId);
 
             return response()->json([
                 'success' => true,
@@ -896,22 +926,27 @@ class CourseEnrollmentController extends Controller
         });
     }
     
-    public function getMcSubmission($itemId)
+    private function mcSubmissionHistory($itemId, $userId)
     {
-        $userId = Auth::id();
-
-        $submissions = CourseMcSubmission::where('item_id', $itemId)
+        return CourseMcSubmission::where('item_id', $itemId)
             ->where('user_id', $userId)
             ->orderBy('attempt_no', 'asc')
             ->get()
             ->map(function ($s) {
                 return [
+                    'mc_submission_id' => $s->mc_submission_id,
+                    'has_answer_details' => is_array($s->answer_details) && count($s->answer_details) > 0,
                     'attempt_no'   => $s->attempt_no,
                     'grade'        => $s->grade,
                     'is_remedial'  => $s->is_remedial,
-                    'submitted_at' => $s->submitted_at ? $s->submitted_at->format('d M Y H:i') : null,
+                    'submitted_at' => $s->submitted_at?->toIso8601String(),
                 ];
             });
+    }
+
+    public function getMcSubmission($itemId)
+    {
+        $submissions = $this->mcSubmissionHistory($itemId, Auth::id());
 
         if ($submissions->isNotEmpty()) {
             return response()->json([
@@ -922,6 +957,30 @@ class CourseEnrollmentController extends Controller
         }
 
         return response()->json(['exists' => false]);
+    }
+
+    public function getMcSubmissionReview($itemId, $submissionId)
+    {
+        $submission = CourseMcSubmission::where('item_id', $itemId)
+            ->where('user_id', Auth::id())
+            ->where('mc_submission_id', $submissionId)
+            ->first();
+
+        if (!$submission) {
+            return response()->json(['message' => 'Submission not found.'], 404);
+        }
+
+        $hasDetails = is_array($submission->answer_details) && count($submission->answer_details) > 0;
+
+        return response()->json([
+            'mc_submission_id' => $submission->mc_submission_id,
+            'attempt_no' => $submission->attempt_no,
+            'grade' => $submission->grade,
+            'submitted_at' => $submission->submitted_at?->toIso8601String(),
+            'has_answer_details' => $hasDetails,
+            'answer_details' => $hasDetails ? $submission->answer_details : [],
+            'message' => $hasDetails ? null : 'Detail jawaban tidak tersedia untuk percobaan ini',
+        ]);
     }
     public function storeForumReply(Request $request, $forumId)
     {

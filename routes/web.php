@@ -135,6 +135,8 @@ Route::middleware(['auth', 'role:1,2,3,4'])->group(function () {
     Route::post('/course/{itemId}/essay-submission', [CourseEnrollmentController::class, 'essaySubmission'])->name('essay.submission.essaySubmission');
     Route::post('/course/{itemId}/mc-submission', [CourseEnrollmentController::class, 'mcSubmission'])->name('multipleChoice.submission.mcSubmission');
     Route::get('/course/{itemId}/mc-submission/check', [CourseEnrollmentController::class, 'getMcSubmission'])->name('multipleChoice.submission.get');
+    Route::get('/course/{itemId}/mc-submission/{submissionId}', [CourseEnrollmentController::class, 'getMcSubmissionReview'])
+        ->whereNumber('submissionId')->name('multipleChoice.submission.review');
     Route::post('/course/{forumId}/forum-reply', [CourseEnrollmentController::class, 'storeForumReply'])->name('forum.reply.store');
     Route::get('/forum/{forumId}/replies', [CourseEnrollmentController::class, 'getForumDiscussion']);
     Route::post('/item/{itemId}/submission', [CourseEnrollmentController::class, 'uploadSubmission'])->name('submissions.uploadSubmission');
