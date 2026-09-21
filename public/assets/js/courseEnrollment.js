@@ -1146,15 +1146,11 @@ export function InitCourseEnrollment() {
                             <table class="table align-middle mb-0">
                                 <thead class="table-light">
                                     <tr>
-                                    <th>Percobaan</th>
-                                    <th>Skor</th>
-                                    <th>Remedial</th>
-                                    <th>Tanggal</th>
-                                    <th>Lihat Jawaban</th>
                                         <th scope="col">Percobaan</th>
                                         <th scope="col">Skor</th>
                                         <th scope="col">Status</th>
                                         <th scope="col">Tanggal</th>
+                                        <th scope="col">Lihat Jawaban</th>
                                     </tr>
                                 </thead><tbody>`;
                     attemptsHistory.forEach(a => {
